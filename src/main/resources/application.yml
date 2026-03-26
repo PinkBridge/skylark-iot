@@ -1,0 +1,27 @@
+server:
+  port: 8089
+
+spring:
+  application:
+    name: iot-access
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+iot:
+  access:
+    emqx:
+      base-url: http://emqx:18083
+      # 建议在 EMQX Dashboard -> System -> API Key 创建一对 key/secret
+      api-key: ${EMQX_API_KEY:}
+      api-secret: ${EMQX_API_SECRET:}
+    devices:
+      - device-id: demo-001
+        username: demo-001
+        password: demo-001-secret
+        # 兼容阿里物模型 Topic 时可不依赖前缀；保留字段便于后续扩展自定义 topic
+        publish-prefix: up/demo-001/
+        subscribe-prefix: down/demo-001/

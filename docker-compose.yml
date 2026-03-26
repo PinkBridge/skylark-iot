@@ -1,0 +1,28 @@
+services:
+  iot-access:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: iot-access
+    restart: unless-stopped
+    ports:
+      - "8089:8089"
+    environment:
+      - TZ=Asia/Shanghai
+      # EMQX Management API credentials (do NOT commit real values)
+      - EMQX_API_KEY=${EMQX_API_KEY}
+      - EMQX_API_SECRET=${EMQX_API_SECRET}
+
+  emqx:
+    image: emqx/emqx:5.0.26
+    container_name: emqx
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "8883:8883"
+      - "8083:8083"
+      - "8084:8084"
+      - "18083:18083"
+    environment:
+      - TZ=Asia/Shanghai
+
