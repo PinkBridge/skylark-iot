@@ -200,17 +200,61 @@
 
 ### 10.1 运行方式
 
+> 约定：**任何代码改动要生效，都必须重启 `iot-access`**（本地进程重启或容器重启）。
+> 否则你看到的行为仍然是旧版本。
+
 ```bash
 cd iot && mvn spring-boot:run
 ```
 
 默认端口：`8089`
 
+#### 10.1.1 改完代码后如何重启
+
+- **本地运行（mvn spring-boot:run）**：停止当前进程后重新执行上面的启动命令。
+- **docker compose 运行**：仅 `restart` 有时不会更新镜像（你改了代码但容器仍在跑旧版本），所以统一按以下 **3 步**做：
+
+```bash
+# 1) 打包（生成最新 jar）
+mvn -DskipTests package
+
+# 2) 重建镜像并重启（确保容器使用最新 jar）
+docker compose up -d --build iot-access
+
+# 3) 健康检查（确认服务已起来）
+curl http://localhost:8089/actuator/health
+```
+
+### 10.1.1 数据库（设备管理模块：MySQL）
+
+设备管理模块（`mgmt`）使用 **MySQL + Flyway + MyBatis**。
+
+默认读取环境变量（可按需覆盖）：
+
+- `DB_URL`（默认：`jdbc:mysql://localhost:3306/skylark_iot?...`）
+- `DB_USERNAME`（默认：`root`）
+- `DB_PASSWORD`（默认：`root`）
+- `DB_DRIVER`（默认：`com.mysql.cj.jdbc.Driver`）
+
+本机快速启动 MySQL（如你本地已能拉取镜像）：
+
+```bash
+docker run -d --name iot-mysql -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=skylark_iot -p 3306:3306 mysql:8
+```
+
+> 启动服务后 Flyway 会自动执行 `db/migration/V1__init_device_mgmt.sql` 建表。
+
 ### 10.2 提供的接口
 
 - `POST /api/access/emqx/auth`：EMQX HTTP Auth（用户名/密码鉴权）
 - `POST /api/access/emqx/acl`：EMQX HTTP ACL（publish/subscribe topic 判定）
 - `POST /api/access/upstream`：上行消息接收（MVP 先结构化日志落地）
+
+设备管理（mgmt）接口（P0）：
+
+- 产品：`POST /api/mgmt/products`、`GET /api/mgmt/products`、`GET /api/mgmt/products/{productKey}`、`PUT /api/mgmt/products/{productKey}`、`PATCH /api/mgmt/products/{productKey}/enable|disable`
+- 设备：`POST /api/mgmt/products/{productKey}/devices`、`GET /api/mgmt/products/{productKey}/devices`、`GET /api/mgmt/products/{productKey}/devices/{deviceName}`、`PUT /api/mgmt/products/{productKey}/devices/{deviceName}`、`PATCH /api/mgmt/products/{productKey}/devices/{deviceName}/enable|disable`、`POST /api/mgmt/products/{productKey}/devices/{deviceName}/reset-secret`
+- 物模型：`PUT /api/mgmt/products/{productKey}/thing-model`、`GET /api/mgmt/products/{productKey}/thing-model`
 
 ### 10.3 MVP 配置项
 
@@ -219,8 +263,10 @@ cd iot && mvn spring-boot:run
 - `iot.access.devices[].username/password`：设备鉴权凭据
 - `iot.access.devices[].publish-prefix`：允许上行 Topic 前缀
 - `iot.access.devices[].subscribe-prefix`：允许订阅 Topic 前缀
+- `iot.access.auth.use-db`：`/auth` 是否使用数据库（默认 `true`）
+- `iot.access.acl.use-db`：`/acl` 是否使用数据库策略（默认 `false`，灰度开启）
 
-> 说明：当前为静态配置（便于快速联调），后续将接入设备管理模块/数据库做动态鉴权与 ACL。
+> 说明：当前已支持“静态配置 + 数据库”双模式，可通过开关回滚。
 
 ---
 
@@ -258,6 +304,48 @@ cd iot && mvn spring-boot:run
   - `UpstreamStorageListener`：落库占位（异步，后续接 MySQL/TimescaleDB）
 
 > 后续要新增处理（例如：协议解析、数据校验、告警触发），只要再加一个 `@EventListener` listener 即可，不影响主链路。
+
+---
+
+### 10.6 多协议解析层（统一事件模型）
+
+为支持后续多种设备报文格式（不局限 Alink JSON），`iot-access` 新增了可插拔协议处理层（解析 + 回执成对）：
+
+- 协议契约：`ProtocolHandler`（`supports(ctx)` + `parse(ctx)` + `buildAck(result, ctx)`）
+- 回执模型：`AckMessage`（`topic/payload/qos/retain`）
+- 调度组件：`ProtocolResolver` + `ProtocolParserRegistry`（内部按 handler 选型）
+- 已实现处理器：
+  - `AlinkJsonProtocolHandler`（同一模块内完成 Alink 解析与 ACK 组包）
+  - `UnknownProtocolParser`（兜底，不中断链路）
+
+解析结果统一映射到 `DeviceUpstreamEvent` 后再发布到事件总线，关键统一字段包括：
+
+- `protocolType`（如 `ALINK_JSON`）
+- `eventType`（`PROPERTY_POST` / `EVENT_POST` / `SERVICE_REPLY` / `UNKNOWN_PROTOCOL`）
+- `messageId`（对齐 Alink `id`）
+- `eventName` / `serviceName` / `alinkMethod`
+- `payloadValid` / `parseError`
+
+设备协议标识来源优先级：
+
+1. `iot_device.protocol_type`（推荐，设备主数据）
+2. Topic 规则推断（如 `/sys/...` 默认推断为 `ALINK_JSON`）
+3. 兜底 `UNKNOWN`
+
+接入新协议步骤（示例）：
+
+1. 新增一个 `ProtocolHandler` 实现类（如 `VendorXProtocolHandler`）。
+2. 在 `supports(ctx)` 中声明协议匹配条件（建议优先匹配 `iot_device.protocol_type`）。
+3. 在 `parse(ctx)` 中产出统一字段（`eventType/messageId/...`）。
+4. 在 `buildAck(...)` 中实现同协议回执规则（成功/失败均可回执）。
+5. 启动后通过上行日志与 ACK 下发日志校验“解析与回执一致性”。
+
+验收用例（最小）：
+
+- 用 `ALINK_JSON` 设备上报属性：应得到 `eventType=PROPERTY_POST`。
+- 用 `ALINK_JSON` 设备上报事件：应得到 `eventType=EVENT_POST`。
+- 下发 service 并上报 reply：应得到 `eventType=SERVICE_REPLY` 且 `messageId` 对齐。
+- 发送未知格式 payload：应得到 `eventType=UNKNOWN_PROTOCOL`，接口不 500。
 
 ---
 
@@ -323,6 +411,23 @@ ACL 规则约定（MVP）：
 
 - `username == deviceName`
 - 允许访问阿里物模型风格 topic：`/sys/{productKey}/{deviceName}/thing/...`
+
+ACL 动态化（可选开关 `iot.access.acl.use-db=true`）：
+
+- 读取策略表：`iot_acl_policy`
+- 按 `product_key + action + subject(deviceName)` 拉取候选策略
+- 匹配顺序：`priority` 高优先
+- 决策规则：**deny 优先于 allow**，无命中默认 deny（fail-close）
+
+策略表示例（MySQL）：
+
+```sql
+INSERT INTO iot_acl_policy(product_key, subject_type, subject_value, action, topic_pattern, effect, priority, enabled)
+VALUES
+('pk001', 'device', 'demo-001', 'publish', '/sys/pk001/demo-001/thing/event/property/post', 'allow', 100, 1),
+('pk001', 'device', 'demo-001', 'subscribe', '/sys/pk001/demo-001/thing/service/#', 'allow', 100, 1),
+('pk001', 'device', 'demo-001', 'publish', '/sys/pk001/demo-001/thing/service/#', 'deny', 200, 1);
+```
 
 ### 11.4 Rules（将上行 MQTT 转发到 iot-access）
 
@@ -445,8 +550,9 @@ Authorization（/acl）示例：
   - 投递到 MQ（Kafka/RabbitMQ）或直接写入时序库（依你们整体架构选）
   - 幂等/去重：支持 `messageId/seq`，避免 webhook 重试导致重复入库
 - **鉴权/ACL 数据源改造**
-  - 目前凭据来自 `application.yml` 静态配置
-  - 需对接设备管理模块/数据库：动态启停、吊销、轮换密钥
+  - `/auth` 已支持从 `iot_device` 动态查库（可开关回滚）
+  - `/acl` 已支持数据库策略模式（`iot_acl_policy`，默认关闭可灰度）
+  - 后续增强：缓存失效、策略管理 API、细粒度约束（QoS/retain/payload）
 - **可观测性**
   - 指标：Auth allow/deny、ACL allow/deny、Webhook 成功率、请求延迟、失败原因分布
   - Trace：为每条上行/下行生成 `traceId`，贯通到下游（已落地基础 traceId）

@@ -4,6 +4,8 @@ import cn.skylark.iot.access.model.UpstreamIngestRequest;
 import cn.skylark.iot.access.service.UpstreamIngestService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,6 +20,8 @@ import java.util.UUID;
 @RequestMapping("/api/access")
 public class UpstreamIngestController {
 
+    private static final Logger log = LoggerFactory.getLogger(UpstreamIngestController.class);
+
     private final UpstreamIngestService ingestService;
     private final ObjectMapper objectMapper;
 
@@ -28,6 +32,7 @@ public class UpstreamIngestController {
 
     @PostMapping("/upstream")
     public ResponseEntity<String> ingest(@RequestBody(required = false) String rawBody) {
+        log.info("iot.upstream.raw body={}", abbreviate(rawBody, 4000));
         UpstreamIngestRequest request = parseToRequest(rawBody);
         ingestService.ingest(request);
         return ResponseEntity.ok()
@@ -124,5 +129,12 @@ public class UpstreamIngestController {
 
     private static String newTraceId() {
         return UUID.randomUUID().toString().replace("-", "");
+    }
+
+    private static String abbreviate(String s, int max) {
+        if (s == null || s.length() <= max) {
+            return s;
+        }
+        return s.substring(0, max) + "...";
     }
 }

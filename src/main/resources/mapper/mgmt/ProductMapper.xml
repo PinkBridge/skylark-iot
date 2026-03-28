@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.skylark.iot.mgmt.mapper.ProductMapper">
+
+    <resultMap id="ProductMap" type="cn.skylark.iot.mgmt.model.entity.ProductEntity">
+        <id column="id" property="id"/>
+        <result column="product_key" property="productKey"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="status" property="status"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="cn.skylark.iot.mgmt.model.entity.ProductEntity">
+        INSERT INTO iot_product(product_key, name, description, status, created_at, updated_at)
+        VALUES (#{productKey}, #{name}, #{description}, #{status}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    </insert>
+
+    <select id="findByProductKey" resultMap="ProductMap">
+        SELECT id, product_key, name, description, status, created_at, updated_at
+        FROM iot_product
+        WHERE product_key = #{productKey}
+    </select>
+
+    <select id="listAll" resultMap="ProductMap">
+        SELECT id, product_key, name, description, status, created_at, updated_at
+        FROM iot_product
+        ORDER BY created_at DESC
+    </select>
+
+    <update id="updateByProductKey" parameterType="cn.skylark.iot.mgmt.model.entity.ProductEntity">
+        UPDATE iot_product
+        SET name = #{name},
+            description = #{description},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE product_key = #{productKey}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE iot_product
+        SET status = #{status},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE product_key = #{productKey}
+    </update>
+
+</mapper>

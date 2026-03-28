@@ -19,6 +19,24 @@ public class IotAccessProperties {
      * EMQX Management API 配置（用于下行 publish）。
      */
     private EmqxManagement emqx = new EmqxManagement();
+    private Auth auth = new Auth();
+    private Acl acl = new Acl();
+
+    @Data
+    public static class Auth {
+        /**
+         * true: /auth 使用数据库（iot_device）校验；false: 使用静态 devices 配置。
+         */
+        private boolean useDb = true;
+    }
+
+    @Data
+    public static class Acl {
+        /**
+         * true: /acl 使用数据库策略（iot_acl_policy）判定；false: 使用静态 ACL 逻辑。
+         */
+        private boolean useDb = false;
+    }
 
     @Data
     public static class EmqxManagement {

@@ -1,0 +1,292 @@
+{
+  "info": {
+    "_postman_id": "6be5d9c1-0d9f-4378-bcbc-8fda90313db3",
+    "name": "iot-access-alink-e2e",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth allow",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\":\"demo-001\",\"password\":\"demo-001-secret\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/access/emqx/auth",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "access",
+            "emqx",
+            "auth"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Auth deny wrong password",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\":\"demo-001\",\"password\":\"wrong\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/access/emqx/auth",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "access",
+            "emqx",
+            "auth"
+          ]
+        }
+      }
+    },
+    {
+      "name": "ACL allow publish property",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\":\"demo-001\",\"action\":\"publish\",\"topic\":\"/sys/pk001/demo-001/thing/event/property/post\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/access/emqx/acl",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "access",
+            "emqx",
+            "acl"
+          ]
+        }
+      }
+    },
+    {
+      "name": "ACL deny publish service topic",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\":\"demo-001\",\"action\":\"publish\",\"topic\":\"/sys/pk001/demo-001/thing/service/reboot\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/access/emqx/acl",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "access",
+            "emqx",
+            "acl"
+          ]
+        }
+      }
+    },
+    {
+      "name": "ACL allow subscribe service wildcard",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\":\"demo-001\",\"action\":\"subscribe\",\"topic\":\"/sys/pk001/demo-001/thing/service/reboot\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/access/emqx/acl",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "access",
+            "emqx",
+            "acl"
+          ]
+        }
+      }
+    },
+    {
+      "name": "ACL deny subscribe property post",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\":\"demo-001\",\"action\":\"subscribe\",\"topic\":\"/sys/pk001/demo-001/thing/event/property/post\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/access/emqx/acl",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "access",
+            "emqx",
+            "acl"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Downstream publish service reboot",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"topic\":\"/sys/pk001/demo-001/thing/service/reboot\",\"payload\":\"{\\\"id\\\":\\\"3001\\\",\\\"version\\\":\\\"1.0\\\",\\\"params\\\":{},\\\"method\\\":\\\"thing.service.reboot\\\"}\",\"qos\":1,\"retain\":false}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/access/downstream/publish",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "access",
+            "downstream",
+            "publish"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Upstream ingest property (trigger ACK)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"topic\":\"/sys/pk001/demo-001/thing/event/property/post\",\"payload\":{\"id\":\"1001\",\"version\":\"1.0\",\"params\":{\"Temp\":25.3},\"method\":\"thing.event.property.post\"},\"timestamp\":1710000000000}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/access/upstream",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "access",
+            "upstream"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Upstream ingest event (trigger ACK)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"topic\":\"/sys/pk001/demo-001/thing/event/Alarm/post\",\"payload\":{\"id\":\"1002\",\"version\":\"1.0\",\"params\":{\"code\":\"OVER_TEMP\"},\"method\":\"thing.event.Alarm.post\"},\"timestamp\":1710000000001}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/access/upstream",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "access",
+            "upstream"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Upstream ingest service reply (trigger ACK)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"topic\":\"/sys/pk001/demo-001/thing/service/reboot/reply\",\"payload\":{\"id\":\"3001\",\"code\":200,\"data\":{\"ok\":true},\"method\":\"thing.service.reboot.reply\"},\"timestamp\":1710000000002}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/access/upstream",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "access",
+            "upstream"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8089"
+    }
+  ]
+}

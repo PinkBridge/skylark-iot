@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.skylark.iot.access.mapper.AclPolicyMapper">
+
+    <resultMap id="AclPolicyMap" type="cn.skylark.iot.access.model.AclPolicyRecord">
+        <id column="id" property="id"/>
+        <result column="product_key" property="productKey"/>
+        <result column="subject_type" property="subjectType"/>
+        <result column="subject_value" property="subjectValue"/>
+        <result column="action" property="action"/>
+        <result column="topic_pattern" property="topicPattern"/>
+        <result column="effect" property="effect"/>
+        <result column="priority" property="priority"/>
+        <result column="enabled" property="enabled"/>
+    </resultMap>
+
+    <select id="findCandidates" resultMap="AclPolicyMap">
+        SELECT id, product_key, subject_type, subject_value, action, topic_pattern, effect, priority, enabled
+        FROM iot_acl_policy
+        WHERE enabled = 1
+          AND product_key = #{productKey}
+          AND action = #{action}
+          AND subject_type = 'device'
+          AND (subject_value = #{subjectValue} OR subject_value = '*')
+        ORDER BY priority DESC, id ASC
+    </select>
+
+</mapper>

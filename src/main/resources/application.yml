@@ -4,6 +4,18 @@ server:
 spring:
   application:
     name: iot-access
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/skylark_iot?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai}
+    username: ${DB_USERNAME:dev}
+    password: ${DB_PASSWORD:123456}
+    driver-class-name: ${DB_DRIVER:com.mysql.cj.jdbc.Driver}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+mybatis:
+  mapper-locations: classpath*:mapper/**/*.xml
+  type-aliases-package: cn.skylark.iot.mgmt.model.entity,cn.skylark.iot.access.model
 
 management:
   endpoints:
@@ -13,6 +25,10 @@ management:
 
 iot:
   access:
+    auth:
+      use-db: ${IOT_ACCESS_AUTH_USE_DB:true}
+    acl:
+      use-db: ${IOT_ACCESS_ACL_USE_DB:false}
     emqx:
       base-url: http://emqx:18083
       # 建议在 EMQX Dashboard -> System -> API Key 创建一对 key/secret

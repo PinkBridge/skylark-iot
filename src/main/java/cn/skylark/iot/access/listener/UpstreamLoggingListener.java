@@ -20,10 +20,19 @@ public class UpstreamLoggingListener {
             return;
         }
         DeviceUpstreamEvent e = published.getEvent();
-        log.info("iot.upstream.event traceId={}, deviceId={}, messageType={}, ts={}, topic={}, payload={}",
+        log.info("iot.upstream.event traceId={}, protocolType={}, eventType={}, messageId={}, deviceId={}, productKey={}, messageType={}, eventName={}, serviceName={}, alinkMethod={}, payloadValid={}, parseError={}, ts={}, topic={}, payload={}",
                 e.getTraceId(),
+                e.getProtocolType(),
+                e.getEventType(),
+                e.getMessageId(),
                 e.getDeviceId(),
+                e.getProductKey(),
                 e.getMessageType(),
+                e.getEventName(),
+                e.getServiceName(),
+                e.getAlinkMethod(),
+                e.getPayloadValid(),
+                e.getParseError(),
                 e.getTimestamp(),
                 e.getTopic(),
                 abbreviate(e.getPayload(), 500));

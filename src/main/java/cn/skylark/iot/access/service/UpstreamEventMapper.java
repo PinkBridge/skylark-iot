@@ -1,18 +1,37 @@
 package cn.skylark.iot.access.service;
 
+import cn.skylark.iot.access.mapper.AccessDeviceMapper;
+import cn.skylark.iot.access.model.AccessDeviceRecord;
 import cn.skylark.iot.access.model.DeviceUpstreamEvent;
 import cn.skylark.iot.access.model.UpstreamIngestRequest;
+import cn.skylark.iot.access.protocol.ParseResult;
+import cn.skylark.iot.access.protocol.ProtocolHandleResult;
+import cn.skylark.iot.access.protocol.ProtocolContext;
+import cn.skylark.iot.access.protocol.ProtocolResolver;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Locale;
 
 @Component
 public class UpstreamEventMapper {
 
+    private final AccessDeviceMapper accessDeviceMapper;
+    private final ProtocolResolver protocolResolver;
+
+    public UpstreamEventMapper(AccessDeviceMapper accessDeviceMapper, ProtocolResolver protocolResolver) {
+        this.accessDeviceMapper = accessDeviceMapper;
+        this.protocolResolver = protocolResolver;
+    }
+
     public DeviceUpstreamEvent toEvent(UpstreamIngestRequest request) {
         DeviceUpstreamEvent e = new DeviceUpstreamEvent();
         if (request == null) {
             e.setTimestamp(System.currentTimeMillis());
+            e.setPayloadValid(false);
+            e.setParseError("request is null");
+            e.setEventType("INVALID_REQUEST");
+            e.setMessageType("unknown");
             return e;
         }
 
@@ -35,11 +54,65 @@ public class UpstreamEventMapper {
             }
         }
 
+        AccessDeviceRecord device = findEnabledDevice(e.getDeviceId());
+        if (device != null) {
+            e.setProductKey(trimToNull(device.getProductKey()));
+            e.setProtocolType(trimToNull(device.getProtocolType()));
+        }
+
+        ProtocolContext context = new ProtocolContext();
+        context.setTraceId(e.getTraceId());
+        context.setTopic(e.getTopic());
+        context.setPayload(e.getPayload());
+        context.setTimestamp(e.getTimestamp());
+        context.setDeviceId(e.getDeviceId());
+        context.setProductKey(e.getProductKey());
+        context.setProtocolType(e.getProtocolType());
+        ProtocolHandleResult handleResult = protocolResolver.resolveAndHandle(context);
+        ParseResult result = handleResult.getParseResult();
+        e.setProtocolType(trimToNull(result.getProtocolType()));
+        e.setEventType(trimToNull(result.getEventType()));
+        if (isText(result.getMessageType())) {
+            e.setMessageType(trimToNull(result.getMessageType()));
+        }
+        e.setMessageId(trimToNull(result.getMessageId()));
+        e.setEventName(trimToNull(result.getEventName()));
+        e.setServiceName(trimToNull(result.getServiceName()));
+        e.setAlinkMethod(trimToNull(result.getAlinkMethod()));
+        e.setPayloadValid(result.getPayloadValid());
+        e.setParseError(trimToNull(result.getParseError()));
+
+        if (!isText(e.getMessageType())) {
+            e.setMessageType("unknown");
+        }
+
         return e;
     }
 
     private static boolean isText(String s) {
         return s != null && !s.trim().isEmpty();
+    }
+
+    private AccessDeviceRecord findEnabledDevice(String deviceName) {
+        if (!isText(deviceName)) {
+            return null;
+        }
+        List<AccessDeviceRecord> devices = accessDeviceMapper.findByDeviceName(deviceName.trim());
+        if (devices == null || devices.isEmpty()) {
+            return null;
+        }
+        for (AccessDeviceRecord item : devices) {
+            if (item == null) {
+                continue;
+            }
+            if (!deviceName.trim().equals(item.getDeviceName())) {
+                continue;
+            }
+            if ("enabled".equalsIgnoreCase(trimToNull(item.getStatus()))) {
+                return item;
+            }
+        }
+        return null;
     }
 
     private static String trimToNull(String s) {

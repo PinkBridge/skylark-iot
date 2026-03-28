@@ -14,10 +14,19 @@ import lombok.Data;
 public class DeviceUpstreamEvent {
 
     private String traceId;
+    private String protocolType;
+    private String eventType;
+    private String messageId;
+    private String productKey;
     private String deviceId;
     private String messageType;
+    private String eventName;
+    private String serviceName;
+    private String alinkMethod;
     private Long timestamp;
     private String topic;
     private String payload;
+    private Boolean payloadValid;
+    private String parseError;
 }
 

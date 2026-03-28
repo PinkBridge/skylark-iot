@@ -9,6 +9,12 @@ services:
       - "8089:8089"
     environment:
       - TZ=Asia/Shanghai
+      - DB_URL=${DB_URL}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_DRIVER=${DB_DRIVER}
+      - IOT_ACCESS_AUTH_USE_DB=${IOT_ACCESS_AUTH_USE_DB}
+      - IOT_ACCESS_ACL_USE_DB=${IOT_ACCESS_ACL_USE_DB}
       # EMQX Management API credentials (do NOT commit real values)
       - EMQX_API_KEY=${EMQX_API_KEY}
       - EMQX_API_SECRET=${EMQX_API_SECRET}

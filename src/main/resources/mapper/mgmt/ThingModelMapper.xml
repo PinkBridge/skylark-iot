@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.skylark.iot.mgmt.mapper.ThingModelMapper">
+
+    <resultMap id="ThingModelMap" type="cn.skylark.iot.mgmt.model.entity.ThingModelEntity">
+        <id column="id" property="id"/>
+        <result column="product_key" property="productKey"/>
+        <result column="model_json" property="modelJson"/>
+        <result column="version" property="version"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <select id="findByPkAndVersion" resultMap="ThingModelMap">
+        SELECT id, product_key, model_json, version, created_at, updated_at
+        FROM iot_thing_model
+        WHERE product_key = #{productKey}
+          AND version = #{version}
+    </select>
+
+    <select id="findLatestByProductKey" resultMap="ThingModelMap">
+        SELECT id, product_key, model_json, version, created_at, updated_at
+        FROM iot_thing_model
+        WHERE product_key = #{productKey}
+        ORDER BY updated_at DESC
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="cn.skylark.iot.mgmt.model.entity.ThingModelEntity">
+        INSERT INTO iot_thing_model(product_key, model_json, version, created_at, updated_at)
+        VALUES (#{productKey}, #{modelJson}, #{version}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    </insert>
+
+    <update id="updateModelJson">
+        UPDATE iot_thing_model
+        SET model_json = #{modelJson},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE product_key = #{productKey}
+          AND version = #{version}
+    </update>
+
+</mapper>

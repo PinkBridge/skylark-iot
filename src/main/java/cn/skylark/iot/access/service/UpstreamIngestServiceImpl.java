@@ -14,7 +14,8 @@ public class UpstreamIngestServiceImpl implements UpstreamIngestService {
     private final UpstreamEventMapper mapper;
     private final DeviceEventBus eventBus;
 
-    public UpstreamIngestServiceImpl(UpstreamEventMapper mapper, DeviceEventBus eventBus) {
+    public UpstreamIngestServiceImpl(UpstreamEventMapper mapper,
+                                     DeviceEventBus eventBus) {
         this.mapper = mapper;
         this.eventBus = eventBus;
     }
@@ -23,7 +24,6 @@ public class UpstreamIngestServiceImpl implements UpstreamIngestService {
     public void ingest(UpstreamIngestRequest request) {
         DeviceUpstreamEvent event = mapper.toEvent(request);
         eventBus.publish(event);
-        // 主链路只保证发布成功；具体“打日志/入队/落库”在 listener 异步执行
         log.debug("iot.upstream.published traceId={}, deviceId={}, messageType={}, ts={}, topic={}",
                 event.getTraceId(),
                 event.getDeviceId(),
