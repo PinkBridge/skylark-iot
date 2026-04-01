@@ -54,7 +54,7 @@ public class ProtocolResolver {
         }
         String topic = ctx.getTopic().trim().toLowerCase(Locale.ROOT);
         if (topic.startsWith("/sys/")) {
-            return "ALINK_JSON";
+            return "MQTT_ALINK_JSON";
         }
         return "UNKNOWN";
     }

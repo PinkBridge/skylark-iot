@@ -6,27 +6,30 @@
 
     <resultMap id="ProductMap" type="cn.skylark.iot.mgmt.model.entity.ProductEntity">
         <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
         <result column="product_key" property="productKey"/>
         <result column="name" property="name"/>
         <result column="description" property="description"/>
+        <result column="protocol_type" property="protocolType"/>
+        <result column="device_type" property="deviceType"/>
         <result column="status" property="status"/>
         <result column="created_at" property="createdAt"/>
         <result column="updated_at" property="updatedAt"/>
     </resultMap>
 
     <insert id="insert" parameterType="cn.skylark.iot.mgmt.model.entity.ProductEntity">
-        INSERT INTO iot_product(product_key, name, description, status, created_at, updated_at)
-        VALUES (#{productKey}, #{name}, #{description}, #{status}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        INSERT INTO iot_product(tenant_id, product_key, name, description, protocol_type, device_type, status, created_at, updated_at)
+        VALUES (#{tenantId}, #{productKey}, #{name}, #{description}, #{protocolType}, #{deviceType}, #{status}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     </insert>
 
     <select id="findByProductKey" resultMap="ProductMap">
-        SELECT id, product_key, name, description, status, created_at, updated_at
+        SELECT id, tenant_id, product_key, name, description, protocol_type, device_type, status, created_at, updated_at
         FROM iot_product
         WHERE product_key = #{productKey}
     </select>
 
     <select id="listAll" resultMap="ProductMap">
-        SELECT id, product_key, name, description, status, created_at, updated_at
+        SELECT id, tenant_id, product_key, name, description, protocol_type, device_type, status, created_at, updated_at
         FROM iot_product
         ORDER BY created_at DESC
     </select>
@@ -35,6 +38,8 @@
         UPDATE iot_product
         SET name = #{name},
             description = #{description},
+            protocol_type = #{protocolType},
+            device_type = #{deviceType},
             updated_at = CURRENT_TIMESTAMP
         WHERE product_key = #{productKey}
     </update>
@@ -45,5 +50,10 @@
             updated_at = CURRENT_TIMESTAMP
         WHERE product_key = #{productKey}
     </update>
+
+    <delete id="deleteByProductKey">
+        DELETE FROM iot_product
+        WHERE product_key = #{productKey}
+    </delete>
 
 </mapper>

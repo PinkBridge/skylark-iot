@@ -1,11 +1,14 @@
 package cn.skylark.iot.mgmt.service;
 
+import cn.skylark.iot.common.tenant.TenantContext;
 import cn.skylark.iot.mgmt.mapper.DeviceMapper;
 import cn.skylark.iot.mgmt.mapper.ProductMapper;
 import cn.skylark.iot.mgmt.model.dto.CreateDeviceRequest;
 import cn.skylark.iot.mgmt.model.dto.DeviceResponse;
 import cn.skylark.iot.mgmt.model.dto.UpdateDeviceRequest;
 import cn.skylark.iot.mgmt.model.entity.DeviceEntity;
+import cn.skylark.iot.mgmt.model.entity.ProductEntity;
+import cn.skylark.iot.mgmt.model.enums.DeviceType;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -31,14 +34,16 @@ public class DeviceServiceImpl implements DeviceService {
 
     @Override
     public DeviceResponse create(String productKey, CreateDeviceRequest req) {
-        assertProductExists(productKey);
+        ProductEntity product = getProduct(productKey);
         DeviceEntity entity = new DeviceEntity();
+        entity.setTenantId(TenantContext.getTenantId());
         entity.setProductKey(productKey);
         entity.setDeviceName(req.getDeviceName().trim());
         entity.setDisplayName(req.getDisplayName());
+        entity.setDeviceType(product.getDeviceType());
         entity.setSecret(StringUtils.hasText(req.getSecret()) ? req.getSecret().trim() : generateSecret());
         entity.setStatus(STATUS_ENABLED);
-        entity.setProtocolType(StringUtils.hasText(req.getProtocolType()) ? req.getProtocolType().trim().toUpperCase(Locale.ROOT) : "ALINK_JSON");
+        entity.setProtocolType(product.getProtocolType());
         entity.setProtocolVersion(StringUtils.hasText(req.getProtocolVersion()) ? req.getProtocolVersion().trim() : "1.0");
         try {
             deviceMapper.insert(entity);
@@ -70,13 +75,14 @@ public class DeviceServiceImpl implements DeviceService {
 
     @Override
     public DeviceResponse update(String productKey, String deviceName, UpdateDeviceRequest req) {
+        String deviceType = DeviceType.normalize(req.getDeviceType());
         String protocolType = StringUtils.hasText(req.getProtocolType())
                 ? req.getProtocolType().trim().toUpperCase(Locale.ROOT)
                 : null;
         String protocolVersion = StringUtils.hasText(req.getProtocolVersion())
                 ? req.getProtocolVersion().trim()
                 : null;
-        if (deviceMapper.updateProfile(productKey, deviceName, req.getDisplayName(), protocolType, protocolVersion) == 0) {
+        if (deviceMapper.updateProfile(productKey, deviceName, req.getDisplayName(), deviceType, protocolType, protocolVersion) == 0) {
             throw new MgmtException(HttpStatus.NOT_FOUND, "device not found");
         }
         return get(productKey, deviceName);
@@ -101,6 +107,14 @@ public class DeviceServiceImpl implements DeviceService {
         return get(productKey, deviceName);
     }
 
+    @Override
+    public void delete(String productKey, String deviceName) {
+        assertProductExists(productKey);
+        if (deviceMapper.deleteByPkAndName(productKey, deviceName) == 0) {
+            throw new MgmtException(HttpStatus.NOT_FOUND, "device not found");
+        }
+    }
+
     private DeviceResponse updateStatus(String productKey, String deviceName, String status) {
         if (deviceMapper.updateStatus(productKey, deviceName, status) == 0) {
             throw new MgmtException(HttpStatus.NOT_FOUND, "device not found");
@@ -109,9 +123,17 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     private void assertProductExists(String productKey) {
-        if (productMapper.findByProductKey(productKey) == null) {
+        if (getProduct(productKey) == null) {
             throw new MgmtException(HttpStatus.NOT_FOUND, "product not found");
         }
+    }
+
+    private ProductEntity getProduct(String productKey) {
+        ProductEntity product = productMapper.findByProductKey(productKey);
+        if (product == null) {
+            throw new MgmtException(HttpStatus.NOT_FOUND, "product not found");
+        }
+        return product;
     }
 
     private DeviceResponse toResponse(DeviceEntity entity) {
@@ -119,6 +141,7 @@ public class DeviceServiceImpl implements DeviceService {
         resp.setProductKey(entity.getProductKey());
         resp.setDeviceName(entity.getDeviceName());
         resp.setDisplayName(entity.getDisplayName());
+        resp.setDeviceType(entity.getDeviceType());
         resp.setStatus(entity.getStatus());
         resp.setSecret(entity.getSecret());
         resp.setProtocolType(entity.getProtocolType());

@@ -19,4 +19,6 @@ public interface ProductService {
     ProductResponse enable(String productKey);
 
     ProductResponse disable(String productKey);
+
+    void delete(String productKey);
 }

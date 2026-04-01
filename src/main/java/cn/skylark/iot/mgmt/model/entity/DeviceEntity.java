@@ -7,9 +7,11 @@ import java.time.LocalDateTime;
 @Data
 public class DeviceEntity {
     private Long id;
+    private Long tenantId;
     private String productKey;
     private String deviceName;
     private String displayName;
+    private String deviceType;
     private String secret;
     private String status;
     private String protocolType;

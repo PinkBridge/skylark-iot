@@ -5,6 +5,7 @@
 <mapper namespace="cn.skylark.iot.access.mapper.AccessDeviceMapper">
 
     <resultMap id="DeviceMap" type="cn.skylark.iot.access.model.AccessDeviceRecord">
+        <result column="tenant_id" property="tenantId"/>
         <result column="product_key" property="productKey"/>
         <result column="device_name" property="deviceName"/>
         <result column="secret" property="secret"/>
@@ -14,7 +15,7 @@
     </resultMap>
 
     <select id="findByDeviceName" resultMap="DeviceMap">
-        SELECT product_key, device_name, secret, status, protocol_type, protocol_version
+        SELECT tenant_id, product_key, device_name, secret, status, protocol_type, protocol_version
         FROM iot_device
         WHERE device_name = #{deviceName}
     </select>

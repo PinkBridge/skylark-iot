@@ -6,6 +6,7 @@
 
     <resultMap id="ThingModelMap" type="cn.skylark.iot.mgmt.model.entity.ThingModelEntity">
         <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
         <result column="product_key" property="productKey"/>
         <result column="model_json" property="modelJson"/>
         <result column="version" property="version"/>
@@ -14,14 +15,14 @@
     </resultMap>
 
     <select id="findByPkAndVersion" resultMap="ThingModelMap">
-        SELECT id, product_key, model_json, version, created_at, updated_at
+        SELECT id, tenant_id, product_key, model_json, version, created_at, updated_at
         FROM iot_thing_model
         WHERE product_key = #{productKey}
           AND version = #{version}
     </select>
 
     <select id="findLatestByProductKey" resultMap="ThingModelMap">
-        SELECT id, product_key, model_json, version, created_at, updated_at
+        SELECT id, tenant_id, product_key, model_json, version, created_at, updated_at
         FROM iot_thing_model
         WHERE product_key = #{productKey}
         ORDER BY updated_at DESC
@@ -29,8 +30,8 @@
     </select>
 
     <insert id="insert" parameterType="cn.skylark.iot.mgmt.model.entity.ThingModelEntity">
-        INSERT INTO iot_thing_model(product_key, model_json, version, created_at, updated_at)
-        VALUES (#{productKey}, #{modelJson}, #{version}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        INSERT INTO iot_thing_model(tenant_id, product_key, model_json, version, created_at, updated_at)
+        VALUES (#{tenantId}, #{productKey}, #{modelJson}, #{version}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     </insert>
 
     <update id="updateModelJson">
@@ -40,5 +41,10 @@
         WHERE product_key = #{productKey}
           AND version = #{version}
     </update>
+
+    <delete id="deleteByProductKey">
+        DELETE FROM iot_thing_model
+        WHERE product_key = #{productKey}
+    </delete>
 
 </mapper>

@@ -1,10 +1,13 @@
 package cn.skylark.iot.mgmt.model.dto;
 
 import lombok.Data;
+import javax.validation.constraints.AssertTrue;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
+import cn.skylark.iot.mgmt.model.enums.ProductProtocolType;
+import cn.skylark.iot.mgmt.model.enums.DeviceType;
 
 @Data
 public class CreateProductRequest {
@@ -18,5 +21,18 @@ public class CreateProductRequest {
 
     @Size(max = 512, message = "description too long")
     private String description;
+
+    private String protocolType;
+    private String deviceType;
+
+    @AssertTrue(message = "protocolType invalid")
+    public boolean isProtocolTypeValid() {
+        return ProductProtocolType.isValid(protocolType);
+    }
+
+    @AssertTrue(message = "deviceType invalid")
+    public boolean isDeviceTypeValid() {
+        return DeviceType.isValid(deviceType);
+    }
 }
 

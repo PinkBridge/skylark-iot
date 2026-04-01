@@ -6,7 +6,8 @@ import org.apache.ibatis.annotations.Param;
 
 @Mapper
 public interface ThingModelMapper {
-    ThingModelEntity findByPkAndVersion(@Param("productKey") String productKey, @Param("version") String version);
+    ThingModelEntity findByPkAndVersion(@Param("productKey") String productKey,
+                                        @Param("version") String version);
 
     ThingModelEntity findLatestByProductKey(@Param("productKey") String productKey);
 
@@ -15,5 +16,7 @@ public interface ThingModelMapper {
     int updateModelJson(@Param("productKey") String productKey,
                         @Param("version") String version,
                         @Param("modelJson") String modelJson);
+
+    int deleteByProductKey(@Param("productKey") String productKey);
 }
 

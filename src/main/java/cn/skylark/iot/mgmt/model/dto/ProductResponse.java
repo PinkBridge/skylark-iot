@@ -7,6 +7,8 @@ public class ProductResponse {
     private String productKey;
     private String name;
     private String description;
+    private String protocolType;
+    private String deviceType;
     private String status;
 }
 

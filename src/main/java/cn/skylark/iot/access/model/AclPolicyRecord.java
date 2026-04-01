@@ -5,6 +5,7 @@ import lombok.Data;
 @Data
 public class AclPolicyRecord {
     private Long id;
+    private Long tenantId;
     private String productKey;
     private String subjectType;
     private String subjectValue;

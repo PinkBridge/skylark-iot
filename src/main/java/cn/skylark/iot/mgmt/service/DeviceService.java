@@ -21,4 +21,6 @@ public interface DeviceService {
     DeviceResponse disable(String productKey, String deviceName);
 
     DeviceResponse resetSecret(String productKey, String deviceName);
+
+    void delete(String productKey, String deviceName);
 }

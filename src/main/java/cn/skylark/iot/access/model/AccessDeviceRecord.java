@@ -4,6 +4,7 @@ import lombok.Data;
 
 @Data
 public class AccessDeviceRecord {
+    private Long tenantId;
     private String productKey;
     private String deviceName;
     private String secret;

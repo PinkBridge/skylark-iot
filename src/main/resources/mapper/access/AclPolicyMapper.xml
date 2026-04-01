@@ -6,6 +6,7 @@
 
     <resultMap id="AclPolicyMap" type="cn.skylark.iot.access.model.AclPolicyRecord">
         <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
         <result column="product_key" property="productKey"/>
         <result column="subject_type" property="subjectType"/>
         <result column="subject_value" property="subjectValue"/>
@@ -17,7 +18,7 @@
     </resultMap>
 
     <select id="findCandidates" resultMap="AclPolicyMap">
-        SELECT id, product_key, subject_type, subject_value, action, topic_pattern, effect, priority, enabled
+        SELECT id, tenant_id, product_key, subject_type, subject_value, action, topic_pattern, effect, priority, enabled
         FROM iot_acl_policy
         WHERE enabled = 1
           AND product_key = #{productKey}

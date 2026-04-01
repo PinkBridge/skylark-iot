@@ -17,5 +17,7 @@ public interface ProductMapper {
     int updateByProductKey(ProductEntity entity);
 
     int updateStatus(@Param("productKey") String productKey, @Param("status") String status);
+
+    int deleteByProductKey(@Param("productKey") String productKey);
 }
 

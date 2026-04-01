@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 @Data
 public class ThingModelEntity {
     private Long id;
+    private Long tenantId;
     private String productKey;
     private String modelJson;
     private String version;

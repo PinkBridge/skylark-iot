@@ -38,7 +38,7 @@ public class AlinkJsonProtocolHandler implements ProtocolHandler {
             return false;
         }
         String protocolType = safe(ctx.getProtocolType()).toUpperCase(Locale.ROOT);
-        if ("ALINK_JSON".equals(protocolType)) {
+        if ("MQTT_ALINK_JSON".equals(protocolType) || "ALINK_JSON".equals(protocolType)) {
             return true;
         }
         String topic = safe(ctx.getTopic()).toLowerCase(Locale.ROOT);
@@ -48,7 +48,7 @@ public class AlinkJsonProtocolHandler implements ProtocolHandler {
     @Override
     public ParseResult parse(ProtocolContext ctx) {
         ParseResult result = new ParseResult();
-        result.setProtocolType("ALINK_JSON");
+        result.setProtocolType("MQTT_ALINK_JSON");
         classifyByTopic(result, safe(ctx.getTopic()));
         String payload = safe(ctx.getPayload());
         if (!StringUtils.hasText(payload)) {
