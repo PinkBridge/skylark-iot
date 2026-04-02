@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.skylark.iot.mgmt.mapper.DeviceConnectRecordMapper">
+
+    <resultMap id="DeviceConnectRecordMap" type="cn.skylark.iot.mgmt.model.entity.DeviceConnectRecordEntity">
+        <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="product_key" property="productKey"/>
+        <result column="device_key" property="deviceKey"/>
+        <result column="action" property="action"/>
+        <result column="client_id" property="clientId"/>
+        <result column="ip" property="ip"/>
+        <result column="user_agent" property="userAgent"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="cn.skylark.iot.mgmt.model.entity.DeviceConnectRecordEntity">
+        INSERT INTO iot_device_connect_record(tenant_id, product_key, device_key, action, client_id, ip, user_agent, created_at)
+        VALUES (#{tenantId}, #{productKey}, #{deviceKey}, #{action}, #{clientId}, #{ip}, #{userAgent}, CURRENT_TIMESTAMP)
+    </insert>
+
+    <select id="list" resultMap="DeviceConnectRecordMap">
+        SELECT id, tenant_id, product_key, device_key, action, client_id, ip, user_agent, created_at
+        FROM iot_device_connect_record
+        WHERE product_key = #{productKey}
+          AND device_key = #{deviceKey}
+        ORDER BY created_at DESC, id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(1)
+        FROM iot_device_connect_record
+        WHERE product_key = #{productKey}
+          AND device_key = #{deviceKey}
+    </select>
+</mapper>
+

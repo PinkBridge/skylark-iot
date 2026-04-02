@@ -1,10 +1,14 @@
 package cn.skylark.iot.mgmt.service;
 
 import cn.skylark.iot.common.tenant.TenantContext;
+import cn.skylark.iot.mgmt.mapper.DeviceConnectRecordMapper;
 import cn.skylark.iot.mgmt.mapper.DeviceRecordMapper;
 import cn.skylark.iot.mgmt.mapper.DeviceMapper;
 import cn.skylark.iot.mgmt.mapper.ProductMapper;
+import cn.skylark.iot.mgmt.model.dto.CreateDeviceConnectRecordRequest;
 import cn.skylark.iot.mgmt.model.dto.CreateDeviceRequest;
+import cn.skylark.iot.mgmt.model.dto.DeviceConnectRecordPageResponse;
+import cn.skylark.iot.mgmt.model.dto.DeviceConnectRecordResponse;
 import cn.skylark.iot.mgmt.model.dto.DeviceEventRecordPageResponse;
 import cn.skylark.iot.mgmt.model.dto.DeviceEventRecordResponse;
 import cn.skylark.iot.mgmt.model.dto.DevicePropertyRecordPageResponse;
@@ -14,12 +18,12 @@ import cn.skylark.iot.mgmt.model.dto.DeviceResponse;
 import cn.skylark.iot.mgmt.model.dto.DeviceServiceRecordPageResponse;
 import cn.skylark.iot.mgmt.model.dto.DeviceServiceRecordResponse;
 import cn.skylark.iot.mgmt.model.dto.UpdateDeviceRequest;
+import cn.skylark.iot.mgmt.model.entity.DeviceConnectRecordEntity;
 import cn.skylark.iot.mgmt.model.entity.DeviceEventRecordEntity;
 import cn.skylark.iot.mgmt.model.entity.DeviceEntity;
 import cn.skylark.iot.mgmt.model.entity.DevicePropertyRecordEntity;
 import cn.skylark.iot.mgmt.model.entity.DeviceServiceRecordEntity;
 import cn.skylark.iot.mgmt.model.entity.ProductEntity;
-import cn.skylark.iot.mgmt.model.enums.DeviceType;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -33,16 +37,21 @@ import java.util.Locale;
 public class DeviceServiceImpl implements DeviceService {
     private static final String STATUS_ENABLED = "enabled";
     private static final String STATUS_DISABLED = "disabled";
+    private static final String CONNECT_STATUS_DISCONNECTED = "disconnected";
+    private static final String CONNECT_STATUS_CONNECTED = "connected";
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private final DeviceMapper deviceMapper;
     private final DeviceRecordMapper deviceRecordMapper;
+    private final DeviceConnectRecordMapper deviceConnectRecordMapper;
     private final ProductMapper productMapper;
 
     public DeviceServiceImpl(DeviceMapper deviceMapper,
                              DeviceRecordMapper deviceRecordMapper,
+                             DeviceConnectRecordMapper deviceConnectRecordMapper,
                              ProductMapper productMapper) {
         this.deviceMapper = deviceMapper;
         this.deviceRecordMapper = deviceRecordMapper;
+        this.deviceConnectRecordMapper = deviceConnectRecordMapper;
         this.productMapper = productMapper;
     }
 
@@ -61,6 +70,7 @@ public class DeviceServiceImpl implements DeviceService {
             entity.setDeviceType(product.getDeviceType());
             entity.setSecret(generateSecret16());
             entity.setStatus(STATUS_ENABLED);
+            entity.setConnectStatus(CONNECT_STATUS_DISCONNECTED);
             entity.setProtocolType(product.getProtocolType());
             entity.setProtocolVersion("1.0");
             try {
@@ -108,15 +118,16 @@ public class DeviceServiceImpl implements DeviceService {
 
     @Override
     public DeviceResponse update(String productKey, String deviceKey, UpdateDeviceRequest req) {
-        String deviceType = DeviceType.normalize(req.getDeviceType());
-        String protocolType = req.getProtocolType() != null && !req.getProtocolType().trim().isEmpty()
-                ? req.getProtocolType().trim().toUpperCase(Locale.ROOT)
-                : null;
-        String protocolVersion = req.getProtocolVersion() != null && !req.getProtocolVersion().trim().isEmpty()
-                ? req.getProtocolVersion().trim()
-                : null;
-        if (deviceMapper.updateProfile(productKey, deviceKey, deviceType, protocolType, protocolVersion) == 0) {
-            throw new MgmtException(HttpStatus.NOT_FOUND, "device not found");
+        String name = req.getDeviceName() == null ? "" : req.getDeviceName().trim();
+        if (name.isEmpty()) {
+            throw new MgmtException(HttpStatus.BAD_REQUEST, "deviceName required");
+        }
+        try {
+            if (deviceMapper.updateName(productKey, deviceKey, name) == 0) {
+                throw new MgmtException(HttpStatus.NOT_FOUND, "device not found");
+            }
+        } catch (DuplicateKeyException e) {
+            throw new MgmtException(HttpStatus.CONFLICT, "device name already exists in this product");
         }
         return get(productKey, deviceKey);
     }
@@ -133,7 +144,7 @@ public class DeviceServiceImpl implements DeviceService {
 
     @Override
     public DeviceResponse resetSecret(String productKey, String deviceKey) {
-        String secret = generateSecret();
+        String secret = generateSecret16();
         if (deviceMapper.updateSecret(productKey, deviceKey, secret) == 0) {
             throw new MgmtException(HttpStatus.NOT_FOUND, "device not found");
         }
@@ -231,6 +242,50 @@ public class DeviceServiceImpl implements DeviceService {
         }
     }
 
+    @Override
+    public DeviceConnectRecordPageResponse listConnectRecords(String productKey, String deviceKey, DeviceRecordPageQuery query) {
+        assertDeviceExists(productKey, deviceKey);
+        int pageNum = normalizePageNum(query.getPageNum());
+        int pageSize = normalizePageSize(query.getPageSize());
+        int offset = (pageNum - 1) * pageSize;
+        List<DeviceConnectRecordEntity> list = deviceConnectRecordMapper.list(productKey, deviceKey, offset, pageSize);
+        List<DeviceConnectRecordResponse> result = new ArrayList<DeviceConnectRecordResponse>();
+        for (DeviceConnectRecordEntity item : list) {
+            DeviceConnectRecordResponse resp = new DeviceConnectRecordResponse();
+            resp.setAction(item.getAction());
+            resp.setClientId(item.getClientId());
+            resp.setIp(item.getIp());
+            resp.setUserAgent(item.getUserAgent());
+            resp.setCreatedAt(item.getCreatedAt());
+            result.add(resp);
+        }
+        DeviceConnectRecordPageResponse response = new DeviceConnectRecordPageResponse();
+        response.setRecords(result);
+        response.setTotal(deviceConnectRecordMapper.count(productKey, deviceKey));
+        response.setPageNum(pageNum);
+        response.setPageSize(pageSize);
+        return response;
+    }
+
+    @Override
+    public void createConnectRecord(String productKey, String deviceKey, CreateDeviceConnectRecordRequest request) {
+        assertDeviceExists(productKey, deviceKey);
+        String action = request.getAction() == null ? "" : request.getAction().trim().toLowerCase(Locale.ROOT);
+        if (!CONNECT_STATUS_CONNECTED.equals(action) && !CONNECT_STATUS_DISCONNECTED.equals(action)) {
+            throw new MgmtException(HttpStatus.BAD_REQUEST, "action invalid");
+        }
+        deviceMapper.updateConnectStatusWithLastTime(productKey, deviceKey, action);
+        DeviceConnectRecordEntity entity = new DeviceConnectRecordEntity();
+        entity.setTenantId(TenantContext.getTenantId());
+        entity.setProductKey(productKey);
+        entity.setDeviceKey(deviceKey);
+        entity.setAction(action);
+        entity.setClientId(request.getClientId());
+        entity.setIp(request.getIp());
+        entity.setUserAgent(request.getUserAgent());
+        deviceConnectRecordMapper.insert(entity);
+    }
+
     private DeviceResponse updateStatus(String productKey, String deviceKey, String status) {
         if (deviceMapper.updateStatus(productKey, deviceKey, status) == 0) {
             throw new MgmtException(HttpStatus.NOT_FOUND, "device not found");
@@ -265,6 +320,9 @@ public class DeviceServiceImpl implements DeviceService {
         resp.setDeviceName(entity.getDeviceName());
         resp.setDeviceType(entity.getDeviceType());
         resp.setStatus(entity.getStatus());
+        resp.setConnectStatus(entity.getConnectStatus());
+        resp.setLastConnectedAt(entity.getLastConnectedAt());
+        resp.setLastDisconnectedAt(entity.getLastDisconnectedAt());
         resp.setSecret(entity.getSecret());
         resp.setProtocolType(entity.getProtocolType());
         resp.setProtocolVersion(entity.getProtocolVersion());

@@ -1,6 +1,8 @@
 package cn.skylark.iot.mgmt.controller;
 
 import cn.skylark.iot.mgmt.model.dto.CreateDeviceRequest;
+import cn.skylark.iot.mgmt.model.dto.CreateDeviceConnectRecordRequest;
+import cn.skylark.iot.mgmt.model.dto.DeviceConnectRecordPageResponse;
 import cn.skylark.iot.mgmt.model.dto.DeviceEventRecordPageResponse;
 import cn.skylark.iot.mgmt.model.dto.DevicePropertyRecordPageResponse;
 import cn.skylark.iot.mgmt.model.dto.DeviceRecordPageQuery;
@@ -93,6 +95,20 @@ public class DeviceController {
                                                               @PathVariable("deviceKey") String deviceKey,
                                                               @ModelAttribute DeviceRecordPageQuery query) {
         return deviceService.listServiceRecords(productKey, deviceKey, query);
+    }
+
+    @GetMapping("/{deviceKey}/connect-records")
+    public DeviceConnectRecordPageResponse listConnectRecords(@PathVariable("productKey") String productKey,
+                                                              @PathVariable("deviceKey") String deviceKey,
+                                                              @ModelAttribute DeviceRecordPageQuery query) {
+        return deviceService.listConnectRecords(productKey, deviceKey, query);
+    }
+
+    @PostMapping("/{deviceKey}/connect-records")
+    public void createConnectRecord(@PathVariable("productKey") String productKey,
+                                    @PathVariable("deviceKey") String deviceKey,
+                                    @Validated @RequestBody CreateDeviceConnectRecordRequest request) {
+        deviceService.createConnectRecord(productKey, deviceKey, request);
     }
 
     @DeleteMapping("/{deviceKey}")

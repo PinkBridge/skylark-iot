@@ -1,6 +1,8 @@
 package cn.skylark.iot.mgmt.service;
 
 import cn.skylark.iot.mgmt.model.dto.CreateDeviceRequest;
+import cn.skylark.iot.mgmt.model.dto.CreateDeviceConnectRecordRequest;
+import cn.skylark.iot.mgmt.model.dto.DeviceConnectRecordPageResponse;
 import cn.skylark.iot.mgmt.model.dto.DeviceEventRecordPageResponse;
 import cn.skylark.iot.mgmt.model.dto.DevicePropertyRecordPageResponse;
 import cn.skylark.iot.mgmt.model.dto.DeviceRecordPageQuery;
@@ -33,6 +35,10 @@ public interface DeviceService {
     DeviceEventRecordPageResponse listEventRecords(String productKey, String deviceKey, DeviceRecordPageQuery query);
 
     DeviceServiceRecordPageResponse listServiceRecords(String productKey, String deviceKey, DeviceRecordPageQuery query);
+
+    DeviceConnectRecordPageResponse listConnectRecords(String productKey, String deviceKey, DeviceRecordPageQuery query);
+
+    void createConnectRecord(String productKey, String deviceKey, CreateDeviceConnectRecordRequest request);
 
     void delete(String productKey, String deviceKey);
 }

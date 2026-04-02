@@ -25,9 +25,21 @@ public interface DeviceMapper {
                       @Param("protocolType") String protocolType,
                       @Param("protocolVersion") String protocolVersion);
 
+    int updateName(@Param("productKey") String productKey,
+                   @Param("deviceKey") String deviceKey,
+                   @Param("deviceName") String deviceName);
+
     int updateStatus(@Param("productKey") String productKey,
                      @Param("deviceKey") String deviceKey,
                      @Param("status") String status);
+
+    int updateConnectStatus(@Param("productKey") String productKey,
+                            @Param("deviceKey") String deviceKey,
+                            @Param("connectStatus") String connectStatus);
+
+    int updateConnectStatusWithLastTime(@Param("productKey") String productKey,
+                                        @Param("deviceKey") String deviceKey,
+                                        @Param("connectStatus") String connectStatus);
 
     int updateSecret(@Param("productKey") String productKey,
                      @Param("deviceKey") String deviceKey,
