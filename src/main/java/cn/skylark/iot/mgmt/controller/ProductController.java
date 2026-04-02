@@ -1,6 +1,9 @@
 package cn.skylark.iot.mgmt.controller;
 
 import cn.skylark.iot.mgmt.model.dto.CreateProductRequest;
+import cn.skylark.iot.mgmt.model.dto.CopyProductRequest;
+import cn.skylark.iot.mgmt.model.dto.ProductPageQuery;
+import cn.skylark.iot.mgmt.model.dto.ProductPageResponse;
 import cn.skylark.iot.mgmt.model.dto.ProductResponse;
 import cn.skylark.iot.mgmt.model.dto.UpdateProductRequest;
 import cn.skylark.iot.mgmt.service.ProductService;
@@ -11,11 +14,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/mgmt/products")
@@ -33,8 +35,8 @@ public class ProductController {
     }
 
     @GetMapping
-    public List<ProductResponse> list() {
-        return productService.list();
+    public ProductPageResponse list(@ModelAttribute ProductPageQuery query) {
+        return productService.list(query);
     }
 
     @GetMapping("/{productKey}")
@@ -56,6 +58,12 @@ public class ProductController {
     @PatchMapping("/{productKey}/disable")
     public ProductResponse disable(@PathVariable("productKey") String productKey) {
         return productService.disable(productKey);
+    }
+
+    @PostMapping("/{productKey}/copy")
+    public ProductResponse copy(@PathVariable("productKey") String productKey,
+                                @Validated @RequestBody CopyProductRequest request) {
+        return productService.copy(productKey, request);
     }
 
     @DeleteMapping("/{productKey}")

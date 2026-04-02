@@ -12,7 +12,15 @@ public interface ProductMapper {
 
     ProductEntity findByProductKey(@Param("productKey") String productKey);
 
-    List<ProductEntity> listAll();
+    List<ProductEntity> listPage(@Param("productKey") String productKey,
+                                 @Param("name") String name,
+                                 @Param("status") String status,
+                                 @Param("offset") int offset,
+                                 @Param("pageSize") int pageSize);
+
+    long countPage(@Param("productKey") String productKey,
+                   @Param("name") String name,
+                   @Param("status") String status);
 
     int updateByProductKey(ProductEntity entity);
 

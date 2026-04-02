@@ -4,15 +4,20 @@ import cn.skylark.iot.common.tenant.TenantContext;
 import cn.skylark.iot.mgmt.mapper.ProductMapper;
 import cn.skylark.iot.mgmt.mapper.DeviceMapper;
 import cn.skylark.iot.mgmt.mapper.ThingModelMapper;
+import cn.skylark.iot.mgmt.model.dto.CopyProductRequest;
 import cn.skylark.iot.mgmt.model.dto.CreateProductRequest;
+import cn.skylark.iot.mgmt.model.dto.ProductPageQuery;
+import cn.skylark.iot.mgmt.model.dto.ProductPageResponse;
 import cn.skylark.iot.mgmt.model.dto.ProductResponse;
 import cn.skylark.iot.mgmt.model.dto.UpdateProductRequest;
 import cn.skylark.iot.mgmt.model.entity.ProductEntity;
+import cn.skylark.iot.mgmt.model.entity.ThingModelEntity;
 import cn.skylark.iot.mgmt.model.enums.DeviceType;
 import cn.skylark.iot.mgmt.model.enums.ProductProtocolType;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +45,8 @@ public class ProductServiceImpl implements ProductService {
         entity.setTenantId(TenantContext.getTenantId());
         entity.setProductKey(req.getProductKey().trim());
         entity.setName(req.getName().trim());
+        entity.setCoverImageUrl(trimToNull(req.getCoverImageUrl()));
+        entity.setThumbnailUrl(trimToNull(req.getThumbnailUrl()));
         entity.setDescription(req.getDescription());
         entity.setProtocolType(ProductProtocolType.normalize(req.getProtocolType()));
         entity.setDeviceType(DeviceType.normalize(req.getDeviceType()));
@@ -62,13 +69,31 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public List<ProductResponse> list() {
-        List<ProductEntity> all = productMapper.listAll();
-        List<ProductResponse> result = new ArrayList<ProductResponse>();
-        for (ProductEntity item : all) {
-            result.add(toResponse(item));
+    public ProductPageResponse list(ProductPageQuery query) {
+        int pageNum = query.getPageNum() == null || query.getPageNum() < 1 ? 1 : query.getPageNum();
+        int pageSize = query.getPageSize() == null || query.getPageSize() < 1 ? 10 : Math.min(query.getPageSize(), 100);
+        int offset = (pageNum - 1) * pageSize;
+        List<ProductEntity> list = productMapper.listPage(
+                trimToNull(query.getProductKey()),
+                trimToNull(query.getName()),
+                trimToNull(query.getStatus()),
+                offset,
+                pageSize
+        );
+        List<ProductResponse> records = new ArrayList<ProductResponse>();
+        for (ProductEntity item : list) {
+            records.add(toResponse(item));
         }
-        return result;
+        ProductPageResponse response = new ProductPageResponse();
+        response.setRecords(records);
+        response.setTotal(productMapper.countPage(
+                trimToNull(query.getProductKey()),
+                trimToNull(query.getName()),
+                trimToNull(query.getStatus())
+        ));
+        response.setPageNum(pageNum);
+        response.setPageSize(pageSize);
+        return response;
     }
 
     @Override
@@ -76,6 +101,8 @@ public class ProductServiceImpl implements ProductService {
         ProductEntity entity = new ProductEntity();
         entity.setProductKey(productKey);
         entity.setName(req.getName().trim());
+        entity.setCoverImageUrl(trimToNull(req.getCoverImageUrl()));
+        entity.setThumbnailUrl(trimToNull(req.getThumbnailUrl()));
         entity.setDescription(req.getDescription());
         entity.setProtocolType(ProductProtocolType.normalize(req.getProtocolType()));
         entity.setDeviceType(DeviceType.normalize(req.getDeviceType()));
@@ -93,6 +120,42 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public ProductResponse disable(String productKey) {
         return updateStatus(productKey, STATUS_DISABLED);
+    }
+
+    @Override
+    public ProductResponse copy(String productKey, CopyProductRequest req) {
+        ProductEntity source = productMapper.findByProductKey(productKey);
+        if (source == null) {
+            throw new MgmtException(HttpStatus.NOT_FOUND, "product not found");
+        }
+
+        ProductEntity target = new ProductEntity();
+        target.setTenantId(TenantContext.getTenantId());
+        target.setProductKey(req.getTargetProductKey().trim());
+        target.setName(req.getTargetName().trim());
+        target.setCoverImageUrl(source.getCoverImageUrl());
+        target.setThumbnailUrl(source.getThumbnailUrl());
+        target.setDescription(source.getDescription());
+        target.setProtocolType(source.getProtocolType());
+        target.setDeviceType(source.getDeviceType());
+        target.setStatus(source.getStatus());
+        try {
+            productMapper.insert(target);
+        } catch (DuplicateKeyException e) {
+            throw new MgmtException(HttpStatus.CONFLICT, "productKey already exists");
+        }
+
+        ThingModelEntity thingModel = thingModelMapper.findLatestByProductKey(productKey);
+        if (thingModel != null) {
+            ThingModelEntity copiedThingModel = new ThingModelEntity();
+            copiedThingModel.setTenantId(TenantContext.getTenantId());
+            copiedThingModel.setProductKey(target.getProductKey());
+            copiedThingModel.setVersion(thingModel.getVersion());
+            copiedThingModel.setModelJson(thingModel.getModelJson());
+            thingModelMapper.insert(copiedThingModel);
+        }
+
+        return get(target.getProductKey());
     }
 
     @Override
@@ -116,10 +179,17 @@ public class ProductServiceImpl implements ProductService {
         ProductResponse resp = new ProductResponse();
         resp.setProductKey(entity.getProductKey());
         resp.setName(entity.getName());
+        resp.setCoverImageUrl(entity.getCoverImageUrl());
+        resp.setThumbnailUrl(entity.getThumbnailUrl());
         resp.setDescription(entity.getDescription());
         resp.setProtocolType(entity.getProtocolType());
         resp.setDeviceType(entity.getDeviceType());
         resp.setStatus(entity.getStatus());
+        resp.setDeviceCount(deviceMapper.countByProductKey(entity.getProductKey()));
         return resp;
+    }
+
+    private String trimToNull(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
     }
 }

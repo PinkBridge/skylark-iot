@@ -15,6 +15,8 @@ public interface DeviceMapper {
 
     List<DeviceEntity> listByProductKey(@Param("productKey") String productKey);
 
+    long countByProductKey(@Param("productKey") String productKey);
+
     int updateDisplayName(@Param("productKey") String productKey,
                           @Param("deviceName") String deviceName,
                           @Param("displayName") String displayName);

@@ -9,6 +9,8 @@
         <result column="tenant_id" property="tenantId"/>
         <result column="product_key" property="productKey"/>
         <result column="name" property="name"/>
+        <result column="cover_image_url" property="coverImageUrl"/>
+        <result column="thumbnail_url" property="thumbnailUrl"/>
         <result column="description" property="description"/>
         <result column="protocol_type" property="protocolType"/>
         <result column="device_type" property="deviceType"/>
@@ -18,25 +20,49 @@
     </resultMap>
 
     <insert id="insert" parameterType="cn.skylark.iot.mgmt.model.entity.ProductEntity">
-        INSERT INTO iot_product(tenant_id, product_key, name, description, protocol_type, device_type, status, created_at, updated_at)
-        VALUES (#{tenantId}, #{productKey}, #{name}, #{description}, #{protocolType}, #{deviceType}, #{status}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        INSERT INTO iot_product(tenant_id, product_key, name, cover_image_url, thumbnail_url, description, protocol_type, device_type, status, created_at, updated_at)
+        VALUES (#{tenantId}, #{productKey}, #{name}, #{coverImageUrl}, #{thumbnailUrl}, #{description}, #{protocolType}, #{deviceType}, #{status}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     </insert>
 
     <select id="findByProductKey" resultMap="ProductMap">
-        SELECT id, tenant_id, product_key, name, description, protocol_type, device_type, status, created_at, updated_at
+        SELECT id, tenant_id, product_key, name, cover_image_url, thumbnail_url, description, protocol_type, device_type, status, created_at, updated_at
         FROM iot_product
         WHERE product_key = #{productKey}
     </select>
 
-    <select id="listAll" resultMap="ProductMap">
-        SELECT id, tenant_id, product_key, name, description, protocol_type, device_type, status, created_at, updated_at
+    <sql id="ProductQueryWhere">
+        <where>
+            <if test="productKey != null and productKey != ''">
+                AND product_key LIKE CONCAT('%', #{productKey}, '%')
+            </if>
+            <if test="name != null and name != ''">
+                AND name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+        </where>
+    </sql>
+
+    <select id="listPage" resultMap="ProductMap">
+        SELECT id, tenant_id, product_key, name, cover_image_url, thumbnail_url, description, protocol_type, device_type, status, created_at, updated_at
         FROM iot_product
+        <include refid="ProductQueryWhere"/>
         ORDER BY created_at DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="countPage" resultType="long">
+        SELECT COUNT(1)
+        FROM iot_product
+        <include refid="ProductQueryWhere"/>
     </select>
 
     <update id="updateByProductKey" parameterType="cn.skylark.iot.mgmt.model.entity.ProductEntity">
         UPDATE iot_product
         SET name = #{name},
+            cover_image_url = #{coverImageUrl},
+            thumbnail_url = #{thumbnailUrl},
             description = #{description},
             protocol_type = #{protocolType},
             device_type = #{deviceType},

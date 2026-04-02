@@ -10,6 +10,8 @@ public class ProductEntity {
     private Long tenantId;
     private String productKey;
     private String name;
+    private String coverImageUrl;
+    private String thumbnailUrl;
     private String description;
     private String protocolType;
     private String deviceType;

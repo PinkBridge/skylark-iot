@@ -14,6 +14,12 @@ public class UpdateProductRequest {
     @Size(max = 128, message = "name too long")
     private String name;
 
+    @Size(max = 512, message = "coverImageUrl too long")
+    private String coverImageUrl;
+
+    @Size(max = 512, message = "thumbnailUrl too long")
+    private String thumbnailUrl;
+
     @Size(max = 512, message = "description too long")
     private String description;
 
