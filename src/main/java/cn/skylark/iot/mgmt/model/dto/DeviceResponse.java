@@ -5,8 +5,8 @@ import lombok.Data;
 @Data
 public class DeviceResponse {
     private String productKey;
+    private String deviceKey;
     private String deviceName;
-    private String displayName;
     private String deviceType;
     private String status;
     private String secret;

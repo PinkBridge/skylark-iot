@@ -8,6 +8,5 @@ import java.util.List;
 
 @Mapper
 public interface AccessDeviceMapper {
-    List<AccessDeviceRecord> findByDeviceName(@Param("deviceName") String deviceName);
+    List<AccessDeviceRecord> findByDeviceKey(@Param("deviceKey") String deviceKey);
 }
-

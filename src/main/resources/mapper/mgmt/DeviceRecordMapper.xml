@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.skylark.iot.mgmt.mapper.DeviceRecordMapper">
+
+    <resultMap id="DevicePropertyRecordMap" type="cn.skylark.iot.mgmt.model.entity.DevicePropertyRecordEntity">
+        <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="product_key" property="productKey"/>
+        <result column="device_name" property="deviceName"/>
+        <result column="property_identifier" property="propertyIdentifier"/>
+        <result column="property_value" property="propertyValue"/>
+        <result column="trace_id" property="traceId"/>
+        <result column="message_id" property="messageId"/>
+        <result column="topic" property="topic"/>
+        <result column="device_timestamp" property="deviceTimestamp"/>
+        <result column="payload" property="payload"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <resultMap id="DeviceEventRecordMap" type="cn.skylark.iot.mgmt.model.entity.DeviceEventRecordEntity">
+        <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="product_key" property="productKey"/>
+        <result column="device_name" property="deviceName"/>
+        <result column="event_name" property="eventName"/>
+        <result column="trace_id" property="traceId"/>
+        <result column="message_id" property="messageId"/>
+        <result column="topic" property="topic"/>
+        <result column="device_timestamp" property="deviceTimestamp"/>
+        <result column="payload" property="payload"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <resultMap id="DeviceServiceRecordMap" type="cn.skylark.iot.mgmt.model.entity.DeviceServiceRecordEntity">
+        <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="product_key" property="productKey"/>
+        <result column="device_name" property="deviceName"/>
+        <result column="service_name" property="serviceName"/>
+        <result column="direction" property="direction"/>
+        <result column="trace_id" property="traceId"/>
+        <result column="message_id" property="messageId"/>
+        <result column="topic" property="topic"/>
+        <result column="device_timestamp" property="deviceTimestamp"/>
+        <result column="payload" property="payload"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <insert id="insertPropertyRecord" parameterType="cn.skylark.iot.mgmt.model.entity.DevicePropertyRecordEntity">
+        INSERT INTO iot_device_property_record(tenant_id, product_key, device_name, property_identifier, property_value, trace_id, message_id, topic, device_timestamp, payload, created_at)
+        VALUES (#{tenantId}, #{productKey}, #{deviceName}, #{propertyIdentifier}, #{propertyValue}, #{traceId}, #{messageId}, #{topic}, #{deviceTimestamp}, #{payload}, CURRENT_TIMESTAMP)
+    </insert>
+
+    <insert id="insertEventRecord" parameterType="cn.skylark.iot.mgmt.model.entity.DeviceEventRecordEntity">
+        INSERT INTO iot_device_event_record(tenant_id, product_key, device_name, event_name, trace_id, message_id, topic, device_timestamp, payload, created_at)
+        VALUES (#{tenantId}, #{productKey}, #{deviceName}, #{eventName}, #{traceId}, #{messageId}, #{topic}, #{deviceTimestamp}, #{payload}, CURRENT_TIMESTAMP)
+    </insert>
+
+    <insert id="insertServiceRecord" parameterType="cn.skylark.iot.mgmt.model.entity.DeviceServiceRecordEntity">
+        INSERT INTO iot_device_service_record(tenant_id, product_key, device_name, service_name, direction, trace_id, message_id, topic, device_timestamp, payload, created_at)
+        VALUES (#{tenantId}, #{productKey}, #{deviceName}, #{serviceName}, #{direction}, #{traceId}, #{messageId}, #{topic}, #{deviceTimestamp}, #{payload}, CURRENT_TIMESTAMP)
+    </insert>
+
+    <select id="listPropertyRecords" resultMap="DevicePropertyRecordMap">
+        SELECT id, tenant_id, product_key, device_name, property_identifier, property_value, trace_id, message_id, topic, device_timestamp, payload, created_at
+        FROM iot_device_property_record
+        WHERE product_key = #{productKey}
+          AND device_name = #{deviceKey}
+        ORDER BY created_at DESC, id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countPropertyRecords" resultType="long">
+        SELECT COUNT(1)
+        FROM iot_device_property_record
+        WHERE product_key = #{productKey}
+          AND device_name = #{deviceKey}
+    </select>
+
+    <select id="listEventRecords" resultMap="DeviceEventRecordMap">
+        SELECT id, tenant_id, product_key, device_name, event_name, trace_id, message_id, topic, device_timestamp, payload, created_at
+        FROM iot_device_event_record
+        WHERE product_key = #{productKey}
+          AND device_name = #{deviceKey}
+        ORDER BY created_at DESC, id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countEventRecords" resultType="long">
+        SELECT COUNT(1)
+        FROM iot_device_event_record
+        WHERE product_key = #{productKey}
+          AND device_name = #{deviceKey}
+    </select>
+
+    <select id="listServiceRecords" resultMap="DeviceServiceRecordMap">
+        SELECT id, tenant_id, product_key, device_name, service_name, direction, trace_id, message_id, topic, device_timestamp, payload, created_at
+        FROM iot_device_service_record
+        WHERE product_key = #{productKey}
+          AND device_name = #{deviceKey}
+        ORDER BY created_at DESC, id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countServiceRecords" resultType="long">
+        SELECT COUNT(1)
+        FROM iot_device_service_record
+        WHERE product_key = #{productKey}
+          AND device_name = #{deviceKey}
+    </select>
+</mapper>

@@ -9,9 +9,6 @@ import javax.validation.constraints.Size;
 
 @Data
 public class UpdateDeviceRequest {
-    @Size(max = 128, message = "displayName too long")
-    private String displayName;
-
     private String deviceType;
 
     @Pattern(regexp = "^[A-Z0-9_]{2,32}$", message = "protocolType format invalid")
@@ -25,4 +22,3 @@ public class UpdateDeviceRequest {
         return DeviceType.isValid(deviceType);
     }
 }
-

@@ -19,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,6 +27,10 @@ import java.util.List;
 public class ProductServiceImpl implements ProductService {
     private static final String STATUS_ENABLED = "enabled";
     private static final String STATUS_DISABLED = "disabled";
+    private static final int PRODUCT_SECRET_LENGTH = 16;
+    private static final char[] PRODUCT_SECRET_ALPHABET =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".toCharArray();
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final ProductMapper productMapper;
     private final DeviceMapper deviceMapper;
@@ -44,6 +49,7 @@ public class ProductServiceImpl implements ProductService {
         ProductEntity entity = new ProductEntity();
         entity.setTenantId(TenantContext.getTenantId());
         entity.setProductKey(req.getProductKey().trim());
+        entity.setProductSecret(generateProductSecret());
         entity.setName(req.getName().trim());
         entity.setCoverImageUrl(trimToNull(req.getCoverImageUrl()));
         entity.setThumbnailUrl(trimToNull(req.getThumbnailUrl()));
@@ -65,7 +71,7 @@ public class ProductServiceImpl implements ProductService {
         if (entity == null) {
             throw new MgmtException(HttpStatus.NOT_FOUND, "product not found");
         }
-        return toResponse(entity);
+        return toResponse(entity, true);
     }
 
     @Override
@@ -82,7 +88,7 @@ public class ProductServiceImpl implements ProductService {
         );
         List<ProductResponse> records = new ArrayList<ProductResponse>();
         for (ProductEntity item : list) {
-            records.add(toResponse(item));
+            records.add(toResponse(item, false));
         }
         ProductPageResponse response = new ProductPageResponse();
         response.setRecords(records);
@@ -132,6 +138,7 @@ public class ProductServiceImpl implements ProductService {
         ProductEntity target = new ProductEntity();
         target.setTenantId(TenantContext.getTenantId());
         target.setProductKey(req.getTargetProductKey().trim());
+        target.setProductSecret(generateProductSecret());
         target.setName(req.getTargetName().trim());
         target.setCoverImageUrl(source.getCoverImageUrl());
         target.setThumbnailUrl(source.getThumbnailUrl());
@@ -175,9 +182,12 @@ public class ProductServiceImpl implements ProductService {
         return get(productKey);
     }
 
-    private ProductResponse toResponse(ProductEntity entity) {
+    private ProductResponse toResponse(ProductEntity entity, boolean includeSecret) {
         ProductResponse resp = new ProductResponse();
         resp.setProductKey(entity.getProductKey());
+        if (includeSecret) {
+            resp.setProductSecret(entity.getProductSecret());
+        }
         resp.setName(entity.getName());
         resp.setCoverImageUrl(entity.getCoverImageUrl());
         resp.setThumbnailUrl(entity.getThumbnailUrl());
@@ -187,6 +197,14 @@ public class ProductServiceImpl implements ProductService {
         resp.setStatus(entity.getStatus());
         resp.setDeviceCount(deviceMapper.countByProductKey(entity.getProductKey()));
         return resp;
+    }
+
+    private static String generateProductSecret() {
+        char[] buf = new char[PRODUCT_SECRET_LENGTH];
+        for (int i = 0; i < PRODUCT_SECRET_LENGTH; i++) {
+            buf[i] = PRODUCT_SECRET_ALPHABET[SECURE_RANDOM.nextInt(PRODUCT_SECRET_ALPHABET.length)];
+        }
+        return new String(buf);
     }
 
     private String trimToNull(String value) {

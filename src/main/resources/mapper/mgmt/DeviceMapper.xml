@@ -9,7 +9,7 @@
         <result column="tenant_id" property="tenantId"/>
         <result column="product_key" property="productKey"/>
         <result column="device_name" property="deviceName"/>
-        <result column="display_name" property="displayName"/>
+        <result column="device_key" property="deviceKey"/>
         <result column="device_type" property="deviceType"/>
         <result column="secret" property="secret"/>
         <result column="status" property="status"/>
@@ -20,24 +20,30 @@
     </resultMap>
 
     <insert id="insert" parameterType="cn.skylark.iot.mgmt.model.entity.DeviceEntity">
-        INSERT INTO iot_device(tenant_id, product_key, device_name, display_name, device_type, secret, status, protocol_type, protocol_version, created_at, updated_at)
-        VALUES (#{tenantId}, #{productKey}, #{deviceName}, #{displayName}, #{deviceType}, #{secret}, #{status},
+        INSERT INTO iot_device(tenant_id, product_key, device_name, device_key, device_type, secret, status, protocol_type, protocol_version, created_at, updated_at)
+        VALUES (#{tenantId}, #{productKey}, #{deviceName}, #{deviceKey}, #{deviceType}, #{secret}, #{status},
                 CASE WHEN #{protocolType} IS NULL OR #{protocolType} = '' THEN 'MQTT_ALINK_JSON' ELSE #{protocolType} END,
                 #{protocolVersion},
                 CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     </insert>
 
-    <select id="findByPkAndName" resultMap="DeviceMap">
-        SELECT id, tenant_id, product_key, device_name, display_name, device_type, secret, status, protocol_type, protocol_version, created_at, updated_at
+    <select id="findByPkAndDeviceKey" resultMap="DeviceMap">
+        SELECT id, tenant_id, product_key, device_name, device_key, device_type, secret, status, protocol_type, protocol_version, created_at, updated_at
         FROM iot_device
         WHERE product_key = #{productKey}
-          AND device_name = #{deviceName}
+          AND device_key = #{deviceKey}
     </select>
 
     <select id="listByProductKey" resultMap="DeviceMap">
-        SELECT id, tenant_id, product_key, device_name, display_name, device_type, secret, status, protocol_type, protocol_version, created_at, updated_at
+        SELECT id, tenant_id, product_key, device_name, device_key, device_type, secret, status, protocol_type, protocol_version, created_at, updated_at
         FROM iot_device
         WHERE product_key = #{productKey}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="listAll" resultMap="DeviceMap">
+        SELECT id, tenant_id, product_key, device_name, device_key, device_type, secret, status, protocol_type, protocol_version, created_at, updated_at
+        FROM iot_device
         ORDER BY created_at DESC
     </select>
 
@@ -47,18 +53,9 @@
         WHERE product_key = #{productKey}
     </select>
 
-    <update id="updateDisplayName">
-        UPDATE iot_device
-        SET display_name = #{displayName},
-            updated_at = CURRENT_TIMESTAMP
-        WHERE product_key = #{productKey}
-          AND device_name = #{deviceName}
-    </update>
-
     <update id="updateProfile">
         UPDATE iot_device
-        SET display_name = #{displayName},
-            device_type = CASE
+        SET device_type = CASE
                 WHEN #{deviceType} IS NULL OR #{deviceType} = '' THEN device_type
                 ELSE #{deviceType}
             END,
@@ -72,7 +69,7 @@
             END,
             updated_at = CURRENT_TIMESTAMP
         WHERE product_key = #{productKey}
-          AND device_name = #{deviceName}
+          AND device_key = #{deviceKey}
     </update>
 
     <update id="updateStatus">
@@ -80,7 +77,7 @@
         SET status = #{status},
             updated_at = CURRENT_TIMESTAMP
         WHERE product_key = #{productKey}
-          AND device_name = #{deviceName}
+          AND device_key = #{deviceKey}
     </update>
 
     <update id="updateSecret">
@@ -88,13 +85,13 @@
         SET secret = #{secret},
             updated_at = CURRENT_TIMESTAMP
         WHERE product_key = #{productKey}
-          AND device_name = #{deviceName}
+          AND device_key = #{deviceKey}
     </update>
 
-    <delete id="deleteByPkAndName">
+    <delete id="deleteByPkAndDeviceKey">
         DELETE FROM iot_device
         WHERE product_key = #{productKey}
-          AND device_name = #{deviceName}
+          AND device_key = #{deviceKey}
     </delete>
 
     <delete id="deleteByProductKey">

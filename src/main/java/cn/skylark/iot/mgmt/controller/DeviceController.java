@@ -1,7 +1,11 @@
 package cn.skylark.iot.mgmt.controller;
 
 import cn.skylark.iot.mgmt.model.dto.CreateDeviceRequest;
+import cn.skylark.iot.mgmt.model.dto.DeviceEventRecordPageResponse;
+import cn.skylark.iot.mgmt.model.dto.DevicePropertyRecordPageResponse;
+import cn.skylark.iot.mgmt.model.dto.DeviceRecordPageQuery;
 import cn.skylark.iot.mgmt.model.dto.DeviceResponse;
+import cn.skylark.iot.mgmt.model.dto.DeviceServiceRecordPageResponse;
 import cn.skylark.iot.mgmt.model.dto.UpdateDeviceRequest;
 import cn.skylark.iot.mgmt.service.DeviceService;
 import org.springframework.validation.annotation.Validated;
@@ -11,6 +15,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,41 +43,61 @@ public class DeviceController {
         return deviceService.list(productKey);
     }
 
-    @GetMapping("/{deviceName}")
+    @GetMapping("/{deviceKey}")
     public DeviceResponse get(@PathVariable("productKey") String productKey,
-                              @PathVariable("deviceName") String deviceName) {
-        return deviceService.get(productKey, deviceName);
+                              @PathVariable("deviceKey") String deviceKey) {
+        return deviceService.get(productKey, deviceKey);
     }
 
-    @PutMapping("/{deviceName}")
+    @PutMapping("/{deviceKey}")
     public DeviceResponse update(@PathVariable("productKey") String productKey,
-                                 @PathVariable("deviceName") String deviceName,
+                                 @PathVariable("deviceKey") String deviceKey,
                                  @Validated @RequestBody UpdateDeviceRequest request) {
-        return deviceService.update(productKey, deviceName, request);
+        return deviceService.update(productKey, deviceKey, request);
     }
 
-    @PatchMapping("/{deviceName}/enable")
+    @PatchMapping("/{deviceKey}/enable")
     public DeviceResponse enable(@PathVariable("productKey") String productKey,
-                                 @PathVariable("deviceName") String deviceName) {
-        return deviceService.enable(productKey, deviceName);
+                                 @PathVariable("deviceKey") String deviceKey) {
+        return deviceService.enable(productKey, deviceKey);
     }
 
-    @PatchMapping("/{deviceName}/disable")
+    @PatchMapping("/{deviceKey}/disable")
     public DeviceResponse disable(@PathVariable("productKey") String productKey,
-                                  @PathVariable("deviceName") String deviceName) {
-        return deviceService.disable(productKey, deviceName);
+                                  @PathVariable("deviceKey") String deviceKey) {
+        return deviceService.disable(productKey, deviceKey);
     }
 
-    @PostMapping("/{deviceName}/reset-secret")
+    @PostMapping("/{deviceKey}/reset-secret")
     public DeviceResponse resetSecret(@PathVariable("productKey") String productKey,
-                                      @PathVariable("deviceName") String deviceName) {
-        return deviceService.resetSecret(productKey, deviceName);
+                                      @PathVariable("deviceKey") String deviceKey) {
+        return deviceService.resetSecret(productKey, deviceKey);
     }
 
-    @DeleteMapping("/{deviceName}")
+    @GetMapping("/{deviceKey}/property-records")
+    public DevicePropertyRecordPageResponse listPropertyRecords(@PathVariable("productKey") String productKey,
+                                                                @PathVariable("deviceKey") String deviceKey,
+                                                                @ModelAttribute DeviceRecordPageQuery query) {
+        return deviceService.listPropertyRecords(productKey, deviceKey, query);
+    }
+
+    @GetMapping("/{deviceKey}/event-records")
+    public DeviceEventRecordPageResponse listEventRecords(@PathVariable("productKey") String productKey,
+                                                          @PathVariable("deviceKey") String deviceKey,
+                                                          @ModelAttribute DeviceRecordPageQuery query) {
+        return deviceService.listEventRecords(productKey, deviceKey, query);
+    }
+
+    @GetMapping("/{deviceKey}/service-records")
+    public DeviceServiceRecordPageResponse listServiceRecords(@PathVariable("productKey") String productKey,
+                                                              @PathVariable("deviceKey") String deviceKey,
+                                                              @ModelAttribute DeviceRecordPageQuery query) {
+        return deviceService.listServiceRecords(productKey, deviceKey, query);
+    }
+
+    @DeleteMapping("/{deviceKey}")
     public void delete(@PathVariable("productKey") String productKey,
-                       @PathVariable("deviceName") String deviceName) {
-        deviceService.delete(productKey, deviceName);
+                       @PathVariable("deviceKey") String deviceKey) {
+        deviceService.delete(productKey, deviceKey);
     }
 }
-

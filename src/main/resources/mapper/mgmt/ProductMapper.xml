@@ -8,6 +8,7 @@
         <id column="id" property="id"/>
         <result column="tenant_id" property="tenantId"/>
         <result column="product_key" property="productKey"/>
+        <result column="product_secret" property="productSecret"/>
         <result column="name" property="name"/>
         <result column="cover_image_url" property="coverImageUrl"/>
         <result column="thumbnail_url" property="thumbnailUrl"/>
@@ -20,12 +21,12 @@
     </resultMap>
 
     <insert id="insert" parameterType="cn.skylark.iot.mgmt.model.entity.ProductEntity">
-        INSERT INTO iot_product(tenant_id, product_key, name, cover_image_url, thumbnail_url, description, protocol_type, device_type, status, created_at, updated_at)
-        VALUES (#{tenantId}, #{productKey}, #{name}, #{coverImageUrl}, #{thumbnailUrl}, #{description}, #{protocolType}, #{deviceType}, #{status}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        INSERT INTO iot_product(tenant_id, product_key, product_secret, name, cover_image_url, thumbnail_url, description, protocol_type, device_type, status, created_at, updated_at)
+        VALUES (#{tenantId}, #{productKey}, #{productSecret}, #{name}, #{coverImageUrl}, #{thumbnailUrl}, #{description}, #{protocolType}, #{deviceType}, #{status}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     </insert>
 
     <select id="findByProductKey" resultMap="ProductMap">
-        SELECT id, tenant_id, product_key, name, cover_image_url, thumbnail_url, description, protocol_type, device_type, status, created_at, updated_at
+        SELECT id, tenant_id, product_key, product_secret, name, cover_image_url, thumbnail_url, description, protocol_type, device_type, status, created_at, updated_at
         FROM iot_product
         WHERE product_key = #{productKey}
     </select>
@@ -45,7 +46,7 @@
     </sql>
 
     <select id="listPage" resultMap="ProductMap">
-        SELECT id, tenant_id, product_key, name, cover_image_url, thumbnail_url, description, protocol_type, device_type, status, created_at, updated_at
+        SELECT id, tenant_id, product_key, product_secret, name, cover_image_url, thumbnail_url, description, protocol_type, device_type, status, created_at, updated_at
         FROM iot_product
         <include refid="ProductQueryWhere"/>
         ORDER BY created_at DESC

@@ -8,10 +8,10 @@ ON DUPLICATE KEY UPDATE
     description = VALUES(description),
     status = VALUES(status);
 
-INSERT INTO iot_device(product_key, device_name, display_name, secret, status, protocol_type, protocol_version)
-VALUES ('pk001', 'demo-001', 'Demo Device', 'demo-001-secret', 'enabled', 'ALINK_JSON', '1.0')
+INSERT INTO iot_device(tenant_id, product_key, device_name, device_key, device_type, secret, status, protocol_type, protocol_version)
+VALUES (1, 'pk001', 'Demo Device', 'demo-001', 'DIRECT_DEVICE', 'demo-001-secret', 'enabled', 'ALINK_JSON', '1.0')
 ON DUPLICATE KEY UPDATE
-    display_name = VALUES(display_name),
+    device_name = VALUES(device_name),
     secret = VALUES(secret),
     status = VALUES(status),
     protocol_type = VALUES(protocol_type),
@@ -32,4 +32,3 @@ VALUES
 ('pk001', 'device', 'demo-001', 'subscribe', '/sys/pk001/demo-001/thing/service/+/reply_ack', 'allow', 100, 1, NULL),
 ('pk001', 'device', 'demo-001', 'subscribe', '/sys/pk001/demo-001/thing/service/#', 'allow', 100, 1, NULL),
 ('pk001', 'device', 'demo-001', 'publish', '/sys/pk001/demo-001/thing/service/#', 'deny', 200, 1, NULL);
-

@@ -10,35 +10,31 @@ import java.util.List;
 public interface DeviceMapper {
     int insert(DeviceEntity entity);
 
-    DeviceEntity findByPkAndName(@Param("productKey") String productKey,
-                                 @Param("deviceName") String deviceName);
+    DeviceEntity findByPkAndDeviceKey(@Param("productKey") String productKey,
+                                      @Param("deviceKey") String deviceKey);
 
     List<DeviceEntity> listByProductKey(@Param("productKey") String productKey);
 
+    List<DeviceEntity> listAll();
+
     long countByProductKey(@Param("productKey") String productKey);
 
-    int updateDisplayName(@Param("productKey") String productKey,
-                          @Param("deviceName") String deviceName,
-                          @Param("displayName") String displayName);
-
     int updateProfile(@Param("productKey") String productKey,
-                      @Param("deviceName") String deviceName,
-                      @Param("displayName") String displayName,
+                      @Param("deviceKey") String deviceKey,
                       @Param("deviceType") String deviceType,
                       @Param("protocolType") String protocolType,
                       @Param("protocolVersion") String protocolVersion);
 
     int updateStatus(@Param("productKey") String productKey,
-                     @Param("deviceName") String deviceName,
+                     @Param("deviceKey") String deviceKey,
                      @Param("status") String status);
 
     int updateSecret(@Param("productKey") String productKey,
-                     @Param("deviceName") String deviceName,
+                     @Param("deviceKey") String deviceKey,
                      @Param("secret") String secret);
 
-    int deleteByPkAndName(@Param("productKey") String productKey,
-                          @Param("deviceName") String deviceName);
+    int deleteByPkAndDeviceKey(@Param("productKey") String productKey,
+                               @Param("deviceKey") String deviceKey);
 
     int deleteByProductKey(@Param("productKey") String productKey);
 }
-

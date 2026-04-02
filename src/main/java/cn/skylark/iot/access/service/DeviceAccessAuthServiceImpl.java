@@ -41,7 +41,7 @@ public class DeviceAccessAuthServiceImpl implements DeviceAccessAuthService {
     }
 
     private boolean authenticateByDb(String username, String password) {
-        List<AccessDeviceRecord> candidates = accessDeviceMapper.findByDeviceName(username.trim());
+        List<AccessDeviceRecord> candidates = accessDeviceMapper.findByDeviceKey(username.trim());
         if (candidates == null || candidates.isEmpty()) {
             return false;
         }
@@ -52,7 +52,7 @@ public class DeviceAccessAuthServiceImpl implements DeviceAccessAuthService {
             if (!"enabled".equalsIgnoreCase(safe(item.getStatus()))) {
                 continue;
             }
-            if (equalsTrimmed(item.getDeviceName(), username) && equalsTrimmed(item.getSecret(), password)) {
+            if (equalsTrimmed(item.getDeviceKey(), username) && equalsTrimmed(item.getSecret(), password)) {
                 return true;
             }
         }
@@ -126,7 +126,7 @@ public class DeviceAccessAuthServiceImpl implements DeviceAccessAuthService {
     }
 
     private AccessDeviceRecord getEnabledDevice(String username) {
-        List<AccessDeviceRecord> devices = accessDeviceMapper.findByDeviceName(username.trim());
+        List<AccessDeviceRecord> devices = accessDeviceMapper.findByDeviceKey(username.trim());
         if (devices == null || devices.isEmpty()) {
             return null;
         }
@@ -134,7 +134,7 @@ public class DeviceAccessAuthServiceImpl implements DeviceAccessAuthService {
             if (item == null) {
                 continue;
             }
-            if (!equalsTrimmed(item.getDeviceName(), username)) {
+            if (!equalsTrimmed(item.getDeviceKey(), username)) {
                 continue;
             }
             if ("enabled".equalsIgnoreCase(safe(item.getStatus()))) {

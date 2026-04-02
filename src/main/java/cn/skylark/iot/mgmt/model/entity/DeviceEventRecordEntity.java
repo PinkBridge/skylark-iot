@@ -5,18 +5,16 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-public class DeviceEntity {
+public class DeviceEventRecordEntity {
     private Long id;
     private Long tenantId;
     private String productKey;
     private String deviceName;
-    private String deviceKey;
-    private String deviceType;
-    private String secret;
-    private String status;
-    private String protocolType;
-    private String protocolVersion;
+    private String eventName;
+    private String traceId;
+    private String messageId;
+    private String topic;
+    private Long deviceTimestamp;
+    private String payload;
     private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 }
-

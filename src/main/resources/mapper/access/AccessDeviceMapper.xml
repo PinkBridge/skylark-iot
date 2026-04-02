@@ -7,17 +7,17 @@
     <resultMap id="DeviceMap" type="cn.skylark.iot.access.model.AccessDeviceRecord">
         <result column="tenant_id" property="tenantId"/>
         <result column="product_key" property="productKey"/>
-        <result column="device_name" property="deviceName"/>
+        <result column="device_key" property="deviceKey"/>
         <result column="secret" property="secret"/>
         <result column="status" property="status"/>
         <result column="protocol_type" property="protocolType"/>
         <result column="protocol_version" property="protocolVersion"/>
     </resultMap>
 
-    <select id="findByDeviceName" resultMap="DeviceMap">
-        SELECT tenant_id, product_key, device_name, secret, status, protocol_type, protocol_version
+    <select id="findByDeviceKey" resultMap="DeviceMap">
+        SELECT tenant_id, product_key, device_key, secret, status, protocol_type, protocol_version
         FROM iot_device
-        WHERE device_name = #{deviceName}
+        WHERE device_key = #{deviceKey}
     </select>
 
 </mapper>

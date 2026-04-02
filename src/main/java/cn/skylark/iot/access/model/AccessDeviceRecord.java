@@ -6,10 +6,9 @@ import lombok.Data;
 public class AccessDeviceRecord {
     private Long tenantId;
     private String productKey;
-    private String deviceName;
+    private String deviceKey;
     private String secret;
     private String status;
     private String protocolType;
     private String protocolVersion;
 }
-

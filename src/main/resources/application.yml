@@ -9,12 +9,6 @@ spring:
     username: ${DB_USERNAME:dev}
     password: ${DB_PASSWORD:123456}
     driver-class-name: ${DB_DRIVER:com.mysql.cj.jdbc.Driver}
-  flyway:
-    enabled: false
-    locations: classpath:db/migration
-    baseline-on-migrate: true
-    baseline-version: 8
-
 mybatis:
   mapper-locations: classpath*:mapper/**/*.xml
   type-aliases-package: cn.skylark.iot.mgmt.model.entity,cn.skylark.iot.access.model

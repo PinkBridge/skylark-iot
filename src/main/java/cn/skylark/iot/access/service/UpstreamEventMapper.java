@@ -97,7 +97,7 @@ public class UpstreamEventMapper {
         if (!isText(deviceName)) {
             return null;
         }
-        List<AccessDeviceRecord> devices = accessDeviceMapper.findByDeviceName(deviceName.trim());
+        List<AccessDeviceRecord> devices = accessDeviceMapper.findByDeviceKey(deviceName.trim());
         if (devices == null || devices.isEmpty()) {
             return null;
         }
@@ -105,7 +105,7 @@ public class UpstreamEventMapper {
             if (item == null) {
                 continue;
             }
-            if (!deviceName.trim().equals(item.getDeviceName())) {
+            if (!deviceName.trim().equals(item.getDeviceKey())) {
                 continue;
             }
             if ("enabled".equalsIgnoreCase(trimToNull(item.getStatus()))) {

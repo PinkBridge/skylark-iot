@@ -14,5 +14,7 @@ CREATE TABLE IF NOT EXISTS iot_acl_policy (
     PRIMARY KEY (id)
 );
 
-CREATE INDEX idx_iot_acl_policy_lookup
+-- Some environments may already have an index with the original name.
+-- Use a versioned name to avoid collision on migrate.
+CREATE INDEX idx_iot_acl_policy_lookup_v2
     ON iot_acl_policy(product_key, action, subject_type, subject_value, enabled, priority);
