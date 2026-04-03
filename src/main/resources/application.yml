@@ -4,6 +4,10 @@ server:
 spring:
   application:
     name: iot-access
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
   datasource:
     url: ${DB_URL:jdbc:mysql://localhost:3306/skylark_iot?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai}
     username: ${DB_USERNAME:dev}
