@@ -11,6 +11,8 @@ import cn.skylark.iot.mgmt.model.dto.DeviceConnectRecordPageResponse;
 import cn.skylark.iot.mgmt.model.dto.DeviceConnectRecordResponse;
 import cn.skylark.iot.mgmt.model.dto.DeviceEventRecordPageResponse;
 import cn.skylark.iot.mgmt.model.dto.DeviceEventRecordResponse;
+import cn.skylark.iot.mgmt.model.dto.DevicePageQuery;
+import cn.skylark.iot.mgmt.model.dto.DevicePageResponse;
 import cn.skylark.iot.mgmt.model.dto.DevicePropertyRecordPageResponse;
 import cn.skylark.iot.mgmt.model.dto.DevicePropertyRecordResponse;
 import cn.skylark.iot.mgmt.model.dto.DeviceRecordPageQuery;
@@ -27,6 +29,7 @@ import cn.skylark.iot.mgmt.model.entity.ProductEntity;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -66,6 +69,7 @@ public class DeviceServiceImpl implements DeviceService {
             entity.setTenantId(TenantContext.getTenantId());
             entity.setProductKey(productKey);
             entity.setDeviceName(deviceName);
+            entity.setAddress(trimToNull(req.getAddress()));
             entity.setDeviceKey(generateDeviceKey12());
             entity.setDeviceType(product.getDeviceType());
             entity.setSecret(generateSecret16());
@@ -117,13 +121,34 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
+    public DevicePageResponse listAllPage(DevicePageQuery query) {
+        int pageNum = query.getPageNum() == null || query.getPageNum() < 1 ? 1 : query.getPageNum();
+        int pageSize = query.getPageSize() == null || query.getPageSize() < 1 ? 20 : Math.min(query.getPageSize(), 100);
+        int offset = (pageNum - 1) * pageSize;
+        String keyword = StringUtils.hasText(query.getKeyword()) ? query.getKeyword().trim() : null;
+        List<DeviceEntity> list = deviceMapper.listAllPage(keyword, offset, pageSize);
+        long total = deviceMapper.countAllPage(keyword);
+        List<DeviceResponse> records = new ArrayList<DeviceResponse>();
+        for (DeviceEntity item : list) {
+            records.add(toResponse(item));
+        }
+        DevicePageResponse response = new DevicePageResponse();
+        response.setRecords(records);
+        response.setTotal(total);
+        response.setPageNum(pageNum);
+        response.setPageSize(pageSize);
+        return response;
+    }
+
+    @Override
     public DeviceResponse update(String productKey, String deviceKey, UpdateDeviceRequest req) {
         String name = req.getDeviceName() == null ? "" : req.getDeviceName().trim();
         if (name.isEmpty()) {
             throw new MgmtException(HttpStatus.BAD_REQUEST, "deviceName required");
         }
+        String address = trimToNull(req.getAddress());
         try {
-            if (deviceMapper.updateName(productKey, deviceKey, name) == 0) {
+            if (deviceMapper.updateName(productKey, deviceKey, name, address) == 0) {
                 throw new MgmtException(HttpStatus.NOT_FOUND, "device not found");
             }
         } catch (DuplicateKeyException e) {
@@ -318,6 +343,7 @@ public class DeviceServiceImpl implements DeviceService {
         resp.setProductKey(entity.getProductKey());
         resp.setDeviceKey(entity.getDeviceKey());
         resp.setDeviceName(entity.getDeviceName());
+        resp.setAddress(entity.getAddress());
         resp.setDeviceType(entity.getDeviceType());
         resp.setStatus(entity.getStatus());
         resp.setConnectStatus(entity.getConnectStatus());
@@ -337,6 +363,14 @@ public class DeviceServiceImpl implements DeviceService {
     private static String generateSecret16() {
         // 16 hex chars = 8 bytes
         return randomHex(8);
+    }
+
+    private static String trimToNull(String s) {
+        if (s == null) {
+            return null;
+        }
+        String v = s.trim();
+        return v.isEmpty() ? null : v;
     }
 
     private static String randomHex(int bytes) {

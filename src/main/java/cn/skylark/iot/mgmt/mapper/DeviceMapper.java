@@ -17,6 +17,12 @@ public interface DeviceMapper {
 
     List<DeviceEntity> listAll();
 
+    List<DeviceEntity> listAllPage(@Param("keyword") String keyword,
+                                   @Param("offset") int offset,
+                                   @Param("pageSize") int pageSize);
+
+    long countAllPage(@Param("keyword") String keyword);
+
     long countByProductKey(@Param("productKey") String productKey);
 
     int updateProfile(@Param("productKey") String productKey,
@@ -27,7 +33,8 @@ public interface DeviceMapper {
 
     int updateName(@Param("productKey") String productKey,
                    @Param("deviceKey") String deviceKey,
-                   @Param("deviceName") String deviceName);
+                   @Param("deviceName") String deviceName,
+                   @Param("address") String address);
 
     int updateStatus(@Param("productKey") String productKey,
                      @Param("deviceKey") String deviceKey,

@@ -9,6 +9,7 @@ public class DeviceResponse {
     private String productKey;
     private String deviceKey;
     private String deviceName;
+    private String address;
     private String deviceType;
     private String status;
     private String connectStatus;

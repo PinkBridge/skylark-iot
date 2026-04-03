@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.skylark.iot.mgmt.mapper.DeviceGroupRelMapper">
+
+    <resultMap id="DeviceGroupRelMap" type="cn.skylark.iot.mgmt.model.entity.DeviceGroupRelEntity">
+        <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="group_key" property="groupKey"/>
+        <result column="product_key" property="productKey"/>
+        <result column="device_key" property="deviceKey"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="cn.skylark.iot.mgmt.model.entity.DeviceGroupRelEntity">
+        INSERT INTO iot_device_group_rel(tenant_id, group_key, product_key, device_key, created_at)
+        VALUES (#{tenantId}, #{groupKey}, #{productKey}, #{deviceKey}, CURRENT_TIMESTAMP)
+    </insert>
+
+    <delete id="delete">
+        DELETE FROM iot_device_group_rel
+        WHERE group_key = #{groupKey}
+          AND product_key = #{productKey}
+          AND device_key = #{deviceKey}
+    </delete>
+
+    <delete id="deleteByGroupKey">
+        DELETE FROM iot_device_group_rel
+        WHERE group_key = #{groupKey}
+    </delete>
+
+    <select id="listByGroupKey" resultMap="DeviceGroupRelMap">
+        SELECT id, tenant_id, group_key, product_key, device_key, created_at
+        FROM iot_device_group_rel
+        WHERE group_key = #{groupKey}
+        ORDER BY created_at DESC, id DESC
+    </select>
+
+    <select id="countByGroupKey" resultType="long">
+        SELECT COUNT(*)
+        FROM iot_device_group_rel
+        WHERE group_key = #{groupKey}
+    </select>
+
+    <!-- 显式 resultMap：避免 JDBC 将别名变成全小写后无法映射到 groupKey / memberCount，导致列表设备数恒为 0 -->
+    <resultMap id="DeviceGroupMemberCountMap" type="cn.skylark.iot.mgmt.model.dto.DeviceGroupMemberCount">
+        <result column="gk" property="groupKey"/>
+        <result column="cnt" property="memberCount"/>
+    </resultMap>
+
+    <select id="countMembersByGroupKeys" resultMap="DeviceGroupMemberCountMap">
+        SELECT group_key AS gk, COUNT(*) AS cnt
+        FROM iot_device_group_rel
+        WHERE group_key IN
+        <foreach collection="groupKeys" item="gk" open="(" separator="," close=")">
+            #{gk}
+        </foreach>
+        GROUP BY group_key
+    </select>
+
+</mapper>
+

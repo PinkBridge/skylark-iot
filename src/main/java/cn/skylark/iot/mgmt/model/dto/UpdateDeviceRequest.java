@@ -10,4 +10,7 @@ public class UpdateDeviceRequest {
     @NotBlank(message = "deviceName required")
     @Size(max = 128, message = "deviceName too long")
     private String deviceName;
+
+    @Size(max = 512, message = "address too long")
+    private String address;
 }

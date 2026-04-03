@@ -44,7 +44,9 @@ public class TenantInterceptor implements Interceptor {
             "iot_product",
             "iot_device",
             "iot_thing_model",
-            "iot_acl_policy"
+            "iot_acl_policy",
+            "iot_device_group",
+            "iot_device_group_rel"
     };
 
     @Override

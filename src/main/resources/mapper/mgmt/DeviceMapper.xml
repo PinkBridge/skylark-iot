@@ -9,6 +9,7 @@
         <result column="tenant_id" property="tenantId"/>
         <result column="product_key" property="productKey"/>
         <result column="device_name" property="deviceName"/>
+        <result column="address" property="address"/>
         <result column="device_key" property="deviceKey"/>
         <result column="device_type" property="deviceType"/>
         <result column="secret" property="secret"/>
@@ -23,31 +24,58 @@
     </resultMap>
 
     <insert id="insert" parameterType="cn.skylark.iot.mgmt.model.entity.DeviceEntity">
-        INSERT INTO iot_device(tenant_id, product_key, device_name, device_key, device_type, secret, status, connect_status, protocol_type, protocol_version, created_at, updated_at)
-        VALUES (#{tenantId}, #{productKey}, #{deviceName}, #{deviceKey}, #{deviceType}, #{secret}, #{status}, #{connectStatus},
+        INSERT INTO iot_device(tenant_id, product_key, device_name, address, device_key, device_type, secret, status, connect_status, protocol_type, protocol_version, created_at, updated_at)
+        VALUES (#{tenantId}, #{productKey}, #{deviceName}, #{address}, #{deviceKey}, #{deviceType}, #{secret}, #{status}, #{connectStatus},
                 CASE WHEN #{protocolType} IS NULL OR #{protocolType} = '' THEN 'MQTT_ALINK_JSON' ELSE #{protocolType} END,
                 #{protocolVersion},
                 CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     </insert>
 
     <select id="findByPkAndDeviceKey" resultMap="DeviceMap">
-        SELECT id, tenant_id, product_key, device_name, device_key, device_type, secret, status, connect_status, last_connected_at, last_disconnected_at, protocol_type, protocol_version, created_at, updated_at
+        SELECT id, tenant_id, product_key, device_name, address, device_key, device_type, secret, status, connect_status, last_connected_at, last_disconnected_at, protocol_type, protocol_version, created_at, updated_at
         FROM iot_device
         WHERE product_key = #{productKey}
           AND device_key = #{deviceKey}
     </select>
 
     <select id="listByProductKey" resultMap="DeviceMap">
-        SELECT id, tenant_id, product_key, device_name, device_key, device_type, secret, status, connect_status, last_connected_at, last_disconnected_at, protocol_type, protocol_version, created_at, updated_at
+        SELECT id, tenant_id, product_key, device_name, address, device_key, device_type, secret, status, connect_status, last_connected_at, last_disconnected_at, protocol_type, protocol_version, created_at, updated_at
         FROM iot_device
         WHERE product_key = #{productKey}
         ORDER BY created_at DESC
     </select>
 
     <select id="listAll" resultMap="DeviceMap">
-        SELECT id, tenant_id, product_key, device_name, device_key, device_type, secret, status, connect_status, last_connected_at, last_disconnected_at, protocol_type, protocol_version, created_at, updated_at
+        SELECT id, tenant_id, product_key, device_name, address, device_key, device_type, secret, status, connect_status, last_connected_at, last_disconnected_at, protocol_type, protocol_version, created_at, updated_at
         FROM iot_device
         ORDER BY created_at DESC
+    </select>
+
+    <sql id="DeviceGlobalKeywordWhere">
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    device_name LIKE CONCAT('%', #{keyword}, '%')
+                    OR address LIKE CONCAT('%', #{keyword}, '%')
+                    OR device_key LIKE CONCAT('%', #{keyword}, '%')
+                    OR product_key LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+        </where>
+    </sql>
+
+    <select id="listAllPage" resultMap="DeviceMap">
+        SELECT id, tenant_id, product_key, device_name, address, device_key, device_type, secret, status, connect_status, last_connected_at, last_disconnected_at, protocol_type, protocol_version, created_at, updated_at
+        FROM iot_device
+        <include refid="DeviceGlobalKeywordWhere"/>
+        ORDER BY created_at DESC, id DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="countAllPage" resultType="long">
+        SELECT COUNT(1)
+        FROM iot_device
+        <include refid="DeviceGlobalKeywordWhere"/>
     </select>
 
     <select id="countByProductKey" resultType="long">
@@ -78,6 +106,7 @@
     <update id="updateName">
         UPDATE iot_device
         SET device_name = #{deviceName},
+            address = #{address},
             updated_at = CURRENT_TIMESTAMP
         WHERE product_key = #{productKey}
           AND device_key = #{deviceKey}

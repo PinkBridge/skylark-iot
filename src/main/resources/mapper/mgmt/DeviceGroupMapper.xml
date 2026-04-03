@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.skylark.iot.mgmt.mapper.DeviceGroupMapper">
+
+    <resultMap id="DeviceGroupMap" type="cn.skylark.iot.mgmt.model.entity.DeviceGroupEntity">
+        <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="group_key" property="groupKey"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="cn.skylark.iot.mgmt.model.entity.DeviceGroupEntity">
+        INSERT INTO iot_device_group(tenant_id, group_key, name, description, created_at, updated_at)
+        VALUES (#{tenantId}, #{groupKey}, #{name}, #{description}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    </insert>
+
+    <select id="findByGroupKey" resultMap="DeviceGroupMap">
+        SELECT id, tenant_id, group_key, name, description, created_at, updated_at
+        FROM iot_device_group
+        WHERE group_key = #{groupKey}
+    </select>
+
+    <sql id="DeviceGroupQueryWhere">
+        <where>
+            <if test="groupKey != null and groupKey != ''">
+                AND group_key LIKE CONCAT('%', #{groupKey}, '%')
+            </if>
+            <if test="name != null and name != ''">
+                AND name LIKE CONCAT('%', #{name}, '%')
+            </if>
+        </where>
+    </sql>
+
+    <select id="listPage" resultMap="DeviceGroupMap">
+        SELECT id, tenant_id, group_key, name, description, created_at, updated_at
+        FROM iot_device_group
+        <include refid="DeviceGroupQueryWhere"/>
+        ORDER BY created_at DESC, id DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="countPage" resultType="long">
+        SELECT COUNT(1)
+        FROM iot_device_group
+        <include refid="DeviceGroupQueryWhere"/>
+    </select>
+
+    <update id="updateByGroupKey" parameterType="cn.skylark.iot.mgmt.model.entity.DeviceGroupEntity">
+        UPDATE iot_device_group
+        SET name = #{name},
+            description = #{description},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE group_key = #{groupKey}
+    </update>
+
+    <delete id="deleteByGroupKey">
+        DELETE FROM iot_device_group
+        WHERE group_key = #{groupKey}
+    </delete>
+
+</mapper>
+

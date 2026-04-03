@@ -10,6 +10,7 @@ public class DeviceEntity {
     private Long tenantId;
     private String productKey;
     private String deviceName;
+    private String address;
     private String deviceKey;
     private String deviceType;
     private String secret;

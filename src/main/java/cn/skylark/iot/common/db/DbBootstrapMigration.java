@@ -27,7 +27,9 @@ public class DbBootstrapMigration {
         try (Connection conn = dataSource.getConnection()) {
             ensureIotDeviceConnectStatusColumn(conn);
             ensureIotDeviceConnectLastTimeColumns(conn);
+            ensureIotDeviceAddressColumn(conn);
             ensureDeviceConnectRecordTable(conn);
+            ensureDeviceGroupTables(conn);
         } catch (Exception e) {
             log.warn("db bootstrap migration failed: {}", e.getMessage(), e);
         }
@@ -45,6 +47,16 @@ public class DbBootstrapMigration {
             // Index is optional; ignore failure if it already exists.
             st.execute("CREATE INDEX idx_iot_device_connect_status ON iot_device(connect_status)");
         } catch (Exception ignored) {
+        }
+    }
+
+    private static void ensureIotDeviceAddressColumn(Connection conn) throws Exception {
+        if (columnExists(conn, "iot_device", "address")) {
+            return;
+        }
+        log.info("adding column iot_device.address");
+        try (Statement st = conn.createStatement()) {
+            st.execute("ALTER TABLE iot_device ADD COLUMN address VARCHAR(512) NULL AFTER device_name");
         }
     }
 
@@ -116,6 +128,47 @@ public class DbBootstrapMigration {
             ps.setString(1, tableName);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() && rs.getLong(1) > 0;
+            }
+        }
+    }
+
+    private static void ensureDeviceGroupTables(Connection conn) throws Exception {
+        if (!tableExists(conn, "iot_device_group")) {
+            log.info("creating table iot_device_group");
+            try (Statement st = conn.createStatement()) {
+                st.execute(
+                        "CREATE TABLE IF NOT EXISTS iot_device_group (" +
+                                "id BIGINT NOT NULL AUTO_INCREMENT," +
+                                "tenant_id BIGINT NOT NULL DEFAULT 1," +
+                                "group_key VARCHAR(64) NOT NULL," +
+                                "name VARCHAR(128) NOT NULL," +
+                                "description VARCHAR(512)," +
+                                "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP," +
+                                "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP," +
+                                "PRIMARY KEY (id)," +
+                                "UNIQUE KEY uk_iot_device_group_tenant_gk (tenant_id, group_key)," +
+                                "UNIQUE KEY uk_iot_device_group_tenant_name (tenant_id, name)" +
+                                ")"
+                );
+            }
+        }
+        if (!tableExists(conn, "iot_device_group_rel")) {
+            log.info("creating table iot_device_group_rel");
+            try (Statement st = conn.createStatement()) {
+                st.execute(
+                        "CREATE TABLE IF NOT EXISTS iot_device_group_rel (" +
+                                "id BIGINT NOT NULL AUTO_INCREMENT," +
+                                "tenant_id BIGINT NOT NULL DEFAULT 1," +
+                                "group_key VARCHAR(64) NOT NULL," +
+                                "product_key VARCHAR(64) NOT NULL," +
+                                "device_key VARCHAR(64) NOT NULL," +
+                                "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP," +
+                                "PRIMARY KEY (id)," +
+                                "UNIQUE KEY uk_iot_device_group_rel (tenant_id, group_key, product_key, device_key)," +
+                                "KEY idx_iot_device_group_rel_lookup (tenant_id, group_key, created_at)," +
+                                "KEY idx_iot_device_group_rel_device (tenant_id, product_key, device_key)" +
+                                ")"
+                );
             }
         }
     }

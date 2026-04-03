@@ -4,6 +4,8 @@ import cn.skylark.iot.mgmt.model.dto.CreateDeviceRequest;
 import cn.skylark.iot.mgmt.model.dto.CreateDeviceConnectRecordRequest;
 import cn.skylark.iot.mgmt.model.dto.DeviceConnectRecordPageResponse;
 import cn.skylark.iot.mgmt.model.dto.DeviceEventRecordPageResponse;
+import cn.skylark.iot.mgmt.model.dto.DevicePageQuery;
+import cn.skylark.iot.mgmt.model.dto.DevicePageResponse;
 import cn.skylark.iot.mgmt.model.dto.DevicePropertyRecordPageResponse;
 import cn.skylark.iot.mgmt.model.dto.DeviceRecordPageQuery;
 import cn.skylark.iot.mgmt.model.dto.DeviceResponse;
@@ -21,6 +23,8 @@ public interface DeviceService {
     List<DeviceResponse> list(String productKey);
 
     List<DeviceResponse> listAll();
+
+    DevicePageResponse listAllPage(DevicePageQuery query);
 
     DeviceResponse update(String productKey, String deviceKey, UpdateDeviceRequest req);
 
