@@ -4,12 +4,16 @@ server:
 spring:
   application:
     name: iot-access
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/skylark_iot?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai}
+    url: ${DB_URL:jdbc:mysql://localhost:3306/skylark_iot?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
     username: ${DB_USERNAME:dev}
     password: ${DB_PASSWORD:123456}
     driver-class-name: ${DB_DRIVER:com.mysql.cj.jdbc.Driver}
@@ -25,6 +29,10 @@ management:
 
 iot:
   access:
+    webhook:
+      # 客户端上下线 Webhook；true 时暴露 POST /api/access/emqx/webhook/session，须配置 secret 并由 EMQX 请求头 X-Emqx-Webhook-Secret 传入相同值
+      enabled: ${IOT_ACCESS_WEBHOOK_ENABLED:false}
+      secret: ${IOT_ACCESS_WEBHOOK_SECRET:}
     auth:
       use-db: ${IOT_ACCESS_AUTH_USE_DB:true}
     acl:

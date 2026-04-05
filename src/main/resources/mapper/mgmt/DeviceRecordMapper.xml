@@ -79,6 +79,16 @@
           AND device_name = #{deviceKey}
     </select>
 
+    <select id="findLatestPropertyRecord" resultMap="DevicePropertyRecordMap">
+        SELECT id, tenant_id, product_key, device_name, property_identifier, property_value, trace_id, message_id, topic, device_timestamp, payload, created_at
+        FROM iot_device_property_record
+        WHERE product_key = #{productKey}
+          AND device_name = #{deviceKey}
+          AND property_identifier = #{propertyIdentifier}
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+    </select>
+
     <select id="listEventRecords" resultMap="DeviceEventRecordMap">
         SELECT id, tenant_id, product_key, device_name, event_name, trace_id, message_id, topic, device_timestamp, payload, created_at
         FROM iot_device_event_record

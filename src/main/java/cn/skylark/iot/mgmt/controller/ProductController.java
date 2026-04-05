@@ -5,6 +5,8 @@ import cn.skylark.iot.mgmt.model.dto.CopyProductRequest;
 import cn.skylark.iot.mgmt.model.dto.ProductPageQuery;
 import cn.skylark.iot.mgmt.model.dto.ProductPageResponse;
 import cn.skylark.iot.mgmt.model.dto.ProductResponse;
+import cn.skylark.iot.mgmt.model.dto.ProductDataChannelResponse;
+import cn.skylark.iot.mgmt.model.dto.UpdateProductDataChannelRequest;
 import cn.skylark.iot.mgmt.model.dto.UpdateProductRequest;
 import cn.skylark.iot.mgmt.service.ProductService;
 import org.springframework.validation.annotation.Validated;
@@ -18,6 +20,8 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/mgmt/products")
@@ -64,6 +68,18 @@ public class ProductController {
     public ProductResponse copy(@PathVariable("productKey") String productKey,
                                 @Validated @RequestBody CopyProductRequest request) {
         return productService.copy(productKey, request);
+    }
+
+    @GetMapping("/{productKey}/data-channels")
+    public List<ProductDataChannelResponse> listDataChannels(@PathVariable("productKey") String productKey) {
+        return productService.listDataChannels(productKey);
+    }
+
+    @PatchMapping("/{productKey}/data-channels/{id}")
+    public void updateDataChannel(@PathVariable("productKey") String productKey,
+                                  @PathVariable("id") Long id,
+                                  @Validated @RequestBody UpdateProductDataChannelRequest request) {
+        productService.updateDataChannel(productKey, id, request);
     }
 
     @DeleteMapping("/{productKey}")

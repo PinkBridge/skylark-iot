@@ -15,9 +15,14 @@ services:
       - DB_DRIVER=${DB_DRIVER}
       - IOT_ACCESS_AUTH_USE_DB=${IOT_ACCESS_AUTH_USE_DB}
       - IOT_ACCESS_ACL_USE_DB=${IOT_ACCESS_ACL_USE_DB}
+      - IOT_ACCESS_WEBHOOK_ENABLED=${IOT_ACCESS_WEBHOOK_ENABLED:-true}
+      - IOT_ACCESS_WEBHOOK_SECRET=${IOT_ACCESS_WEBHOOK_SECRET}
       # EMQX Management API credentials (do NOT commit real values)
       - EMQX_API_KEY=${EMQX_API_KEY}
       - EMQX_API_SECRET=${EMQX_API_SECRET}
+    depends_on:
+      mysql:
+        condition: service_healthy
 
   emqx:
     image: emqx/emqx:5.0.26
@@ -31,4 +36,53 @@ services:
       - "18083:18083"
     environment:
       - TZ=Asia/Shanghai
+      # Set deterministic dashboard credentials for automation (change via .env in real deployments)
+      - EMQX_DASHBOARD__DEFAULT_USERNAME=${EMQX_DASHBOARD_USERNAME:-admin}
+      - EMQX_DASHBOARD__DEFAULT_PASSWORD=${EMQX_DASHBOARD_PASSWORD:-public}
+    volumes:
+      - emqx_data:/opt/emqx/data
+      - emqx_log:/opt/emqx/log
 
+  mysql:
+    image: mysql:8.0
+    container_name: skylark-mysql
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Shanghai
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-123456}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-skylark_iot}
+      - MYSQL_USER=${MYSQL_USER:-dev}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-123456}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 18
+      start_period: 25s
+
+  emqx-init:
+    image: curlimages/curl:8.7.1
+    container_name: emqx-init
+    depends_on:
+      emqx:
+        condition: service_started
+    environment:
+      - EMQX_API_KEY=${EMQX_API_KEY}
+      - EMQX_API_SECRET=${EMQX_API_SECRET}
+      - EMQX_DASHBOARD_USERNAME=${EMQX_DASHBOARD_USERNAME:-admin}
+      - EMQX_DASHBOARD_PASSWORD=${EMQX_DASHBOARD_PASSWORD:-public}
+      - IOT_ACCESS_WEBHOOK_SECRET=${IOT_ACCESS_WEBHOOK_SECRET}
+      - EMQX_HOST=http://emqx:18083
+    volumes:
+      - ./scripts/init-emqx.sh:/init-emqx.sh:ro
+    entrypoint: ["/bin/sh", "/init-emqx.sh"]
+    restart: "no"
+
+volumes:
+  mysql_data:
+  emqx_data:
+  emqx_log:

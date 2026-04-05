@@ -17,6 +17,97 @@
         <result column="enabled" property="enabled"/>
     </resultMap>
 
+    <insert id="insert" parameterType="cn.skylark.iot.access.model.AclPolicyRecord">
+        INSERT INTO iot_acl_policy(
+            tenant_id, product_key, subject_type, subject_value, action, topic_pattern,
+            effect, priority, enabled, created_at, updated_at
+        )
+        VALUES (
+            #{tenantId}, #{productKey}, #{subjectType}, #{subjectValue}, #{action}, #{topicPattern},
+            #{effect}, #{priority}, #{enabled}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <select id="findProductTemplates" resultMap="AclPolicyMap">
+        SELECT id, tenant_id, product_key, subject_type, subject_value, action, topic_pattern, effect, priority, enabled
+        FROM iot_acl_policy
+        WHERE enabled = 1
+          AND product_key = #{productKey}
+          AND subject_type = 'product'
+        ORDER BY priority DESC, id ASC
+    </select>
+
+    <select id="listProductChannels" resultMap="AclPolicyMap">
+        SELECT id, tenant_id, product_key, subject_type, subject_value, action, topic_pattern, effect, priority, enabled
+        FROM iot_acl_policy
+        WHERE product_key = #{productKey}
+          AND subject_type = 'product'
+        ORDER BY priority DESC, id ASC
+    </select>
+
+    <select id="listDeviceChannels" resultMap="AclPolicyMap">
+        SELECT id, tenant_id, product_key, subject_type, subject_value, action, topic_pattern, effect, priority, enabled
+        FROM iot_acl_policy
+        WHERE product_key = #{productKey}
+          AND subject_type = 'device'
+          AND subject_value = #{deviceKey}
+        ORDER BY priority DESC, id ASC
+    </select>
+
+    <update id="updateEffectAndEnabledById">
+        UPDATE iot_acl_policy
+        SET effect = #{effect},
+            enabled = #{enabled},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND product_key = #{productKey}
+          AND subject_type = 'product'
+    </update>
+
+    <update id="updateDeviceEffectAndEnabledById">
+        UPDATE iot_acl_policy
+        SET effect = #{effect},
+            enabled = #{enabled},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND product_key = #{productKey}
+          AND subject_type = 'device'
+          AND subject_value = #{deviceKey}
+    </update>
+
+    <update id="replaceDevicePlaceholders">
+        UPDATE iot_acl_policy
+        SET topic_pattern = REPLACE(
+                REPLACE(
+                    REPLACE(
+                        REPLACE(
+                            REPLACE(
+                                REPLACE(
+                                    REPLACE(
+                                        REPLACE(topic_pattern, '${deviceKey}', #{deviceKey}),
+                                    '${device_key}', #{deviceKey}),
+                                '${DEVICEKEY}', #{deviceKey}),
+                            '${DEVICE_KEY}', #{deviceKey}),
+                        '{deviceKey}', #{deviceKey}),
+                    '{device_key}', #{deviceKey}),
+                '{DEVICEKEY}', #{deviceKey}),
+            '{DEVICE_KEY}', #{deviceKey}),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE product_key = #{productKey}
+          AND subject_type = 'device'
+          AND subject_value = #{deviceKey}
+          AND (
+              topic_pattern LIKE '%${deviceKey}%'
+              OR topic_pattern LIKE '%${device_key}%'
+              OR topic_pattern LIKE '%${DEVICEKEY}%'
+              OR topic_pattern LIKE '%${DEVICE_KEY}%'
+              OR topic_pattern LIKE '%{deviceKey}%'
+              OR topic_pattern LIKE '%{device_key}%'
+              OR topic_pattern LIKE '%{DEVICEKEY}%'
+              OR topic_pattern LIKE '%{DEVICE_KEY}%'
+          )
+    </update>
+
     <select id="findCandidates" resultMap="AclPolicyMap">
         SELECT id, tenant_id, product_key, subject_type, subject_value, action, topic_pattern, effect, priority, enabled
         FROM iot_acl_policy

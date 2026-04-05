@@ -365,6 +365,7 @@ EMQX 回调 URL（容器内访问）：
 - Auth：`http://iot-access:8089/api/access/emqx/auth`
 - ACL：`http://iot-access:8089/api/access/emqx/acl`
 - 上行 Webhook：`http://iot-access:8089/api/access/upstream`
+- 会话上下线 Webhook（可选，需配置 `iot.access.webhook`）：`http://iot-access:8089/api/access/emqx/webhook/session`（见 11.6）
 
 ### 11.2 Authentication（HTTP Server / password_based）
 
@@ -489,6 +490,54 @@ Authorization（/acl）示例：
 - 回调 body 是否是 JSON
 - `result` 字段是否存在
 - 是否返回了 200/204
+
+### 11.6 客户端上下线 Webhook（入库连接记录）
+
+用于在 EMQX 客户端连接/断开时调用 `iot-access`，复用管理面逻辑写入 `iot_device_connect_record` 并更新设备 `connect_status` / 最后上下线时间。
+
+**`iot-access` 配置（`application.yml` 或环境变量）**：
+
+- `iot.access.webhook.enabled`：`true` 时开放端点；`false`（默认）返回 404。
+- `iot.access.webhook.secret`：`enabled=true` 时须配置非空；请求头 `X-Emqx-Webhook-Secret` 必须与本值完全一致，否则 401。
+
+**EMQX 规则（示例，两条规则分别对应上线/下线）**：
+
+- 数据源 SQL（上线）：
+
+```sql
+SELECT
+  clientid,
+  username,
+  peername,
+  node,
+  timestamp,
+  'client.connected' AS event
+FROM "$events/client_connected"
+```
+
+- 数据源 SQL（下线）：
+
+```sql
+SELECT
+  clientid,
+  username,
+  peername,
+  reason,
+  node,
+  timestamp,
+  'client.disconnected' AS event
+FROM "$events/client_disconnected"
+```
+
+动作：**HTTP Server**（或数据集成 Webhook）
+
+- URL：`http://iot-access:8089/api/access/emqx/webhook/session`
+- Method：`POST`
+- Headers：`Content-Type: application/json`，以及 `X-Emqx-Webhook-Secret: <与 iot.access.webhook.secret 相同>`
+
+Body 使用「键值对」模板，将规则输出字段原样 JSON 序列化即可（与 11.4 类似，字段直接占位 `${clientid}` 等，勿把整段包成字符串）。
+
+约定：**MQTT `username` 须为 `iot_device.device_key`**（与 HTTP 认证一致），否则无法匹配设备则跳过（响应仍 `200` + `{ "ok": false }`）。
 
 ---
 

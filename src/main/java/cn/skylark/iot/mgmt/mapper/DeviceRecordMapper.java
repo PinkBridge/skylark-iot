@@ -24,6 +24,10 @@ public interface DeviceRecordMapper {
     long countPropertyRecords(@Param("productKey") String productKey,
                               @Param("deviceKey") String deviceKey);
 
+    DevicePropertyRecordEntity findLatestPropertyRecord(@Param("productKey") String productKey,
+                                                        @Param("deviceKey") String deviceKey,
+                                                        @Param("propertyIdentifier") String propertyIdentifier);
+
     List<DeviceEventRecordEntity> listEventRecords(@Param("productKey") String productKey,
                                                    @Param("deviceKey") String deviceKey,
                                                    @Param("offset") int offset,

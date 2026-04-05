@@ -21,6 +21,20 @@ public class IotAccessProperties {
     private EmqxManagement emqx = new EmqxManagement();
     private Auth auth = new Auth();
     private Acl acl = new Acl();
+    /** EMQX 规则/Webhook 上下线回调；请求头携带密钥 {@code X-Emqx-Webhook-Secret}。 */
+    private Webhook webhook = new Webhook();
+
+    @Data
+    public static class Webhook {
+        /**
+         * false 时 {@code /api/access/emqx/webhook/session} 返回 404，便于未配置时不暴露端点。
+         */
+        private boolean enabled = false;
+        /**
+         * 与 EMQX HTTP 请求头中的密钥一致；为空且 enabled=true 时每次调用返回 503。
+         */
+        private String secret = "";
+    }
 
     @Data
     public static class Auth {

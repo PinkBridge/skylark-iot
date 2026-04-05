@@ -3,11 +3,15 @@ package cn.skylark.iot.mgmt.controller;
 import cn.skylark.iot.mgmt.model.dto.CreateDeviceRequest;
 import cn.skylark.iot.mgmt.model.dto.CreateDeviceConnectRecordRequest;
 import cn.skylark.iot.mgmt.model.dto.DeviceConnectRecordPageResponse;
+import cn.skylark.iot.mgmt.model.dto.DeviceCurrentPropertyResponse;
 import cn.skylark.iot.mgmt.model.dto.DeviceEventRecordPageResponse;
 import cn.skylark.iot.mgmt.model.dto.DevicePropertyRecordPageResponse;
+import cn.skylark.iot.mgmt.model.dto.DevicePropertyRecordResponse;
 import cn.skylark.iot.mgmt.model.dto.DeviceRecordPageQuery;
 import cn.skylark.iot.mgmt.model.dto.DeviceResponse;
 import cn.skylark.iot.mgmt.model.dto.DeviceServiceRecordPageResponse;
+import cn.skylark.iot.mgmt.model.dto.ProductDataChannelResponse;
+import cn.skylark.iot.mgmt.model.dto.UpdateProductDataChannelRequest;
 import cn.skylark.iot.mgmt.model.dto.UpdateDeviceRequest;
 import cn.skylark.iot.mgmt.service.DeviceService;
 import org.springframework.validation.annotation.Validated;
@@ -76,11 +80,38 @@ public class DeviceController {
         return deviceService.resetSecret(productKey, deviceKey);
     }
 
+    @GetMapping("/{deviceKey}/data-channels")
+    public List<ProductDataChannelResponse> listDataChannels(@PathVariable("productKey") String productKey,
+                                                             @PathVariable("deviceKey") String deviceKey) {
+        return deviceService.listDataChannels(productKey, deviceKey);
+    }
+
+    @GetMapping("/{deviceKey}/current-properties")
+    public List<DeviceCurrentPropertyResponse> listCurrentProperties(@PathVariable("productKey") String productKey,
+                                                                     @PathVariable("deviceKey") String deviceKey) {
+        return deviceService.listCurrentProperties(productKey, deviceKey);
+    }
+
+    @PatchMapping("/{deviceKey}/data-channels/{id}")
+    public void updateDataChannel(@PathVariable("productKey") String productKey,
+                                  @PathVariable("deviceKey") String deviceKey,
+                                  @PathVariable("id") Long id,
+                                  @Validated @RequestBody UpdateProductDataChannelRequest request) {
+        deviceService.updateDataChannel(productKey, deviceKey, id, request);
+    }
+
     @GetMapping("/{deviceKey}/property-records")
     public DevicePropertyRecordPageResponse listPropertyRecords(@PathVariable("productKey") String productKey,
                                                                 @PathVariable("deviceKey") String deviceKey,
                                                                 @ModelAttribute DeviceRecordPageQuery query) {
         return deviceService.listPropertyRecords(productKey, deviceKey, query);
+    }
+
+    @GetMapping("/{deviceKey}/property-records/{propertyIdentifier}/latest")
+    public DevicePropertyRecordResponse getLatestPropertyRecord(@PathVariable("productKey") String productKey,
+                                                                @PathVariable("deviceKey") String deviceKey,
+                                                                @PathVariable("propertyIdentifier") String propertyIdentifier) {
+        return deviceService.getLatestPropertyValue(productKey, deviceKey, propertyIdentifier);
     }
 
     @GetMapping("/{deviceKey}/event-records")

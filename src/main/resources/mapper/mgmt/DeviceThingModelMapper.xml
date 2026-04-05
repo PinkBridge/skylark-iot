@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.skylark.iot.mgmt.mapper.DeviceThingModelMapper">
+
+    <resultMap id="DeviceThingModelMap" type="cn.skylark.iot.mgmt.model.entity.DeviceThingModelEntity">
+        <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="product_key" property="productKey"/>
+        <result column="device_key" property="deviceKey"/>
+        <result column="model_json" property="modelJson"/>
+        <result column="version" property="version"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="cn.skylark.iot.mgmt.model.entity.DeviceThingModelEntity">
+        INSERT INTO iot_device_thing_model(
+            tenant_id, product_key, device_key, model_json, version, created_at, updated_at
+        )
+        VALUES (
+            #{tenantId}, #{productKey}, #{deviceKey}, #{modelJson}, #{version}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <update id="updateModel">
+        UPDATE iot_device_thing_model
+        SET version = #{version},
+            model_json = #{modelJson},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE product_key = #{productKey}
+          AND device_key = #{deviceKey}
+    </update>
+
+    <select id="findByProductAndDevice" resultMap="DeviceThingModelMap">
+        SELECT id, tenant_id, product_key, device_key, model_json, version, created_at, updated_at
+        FROM iot_device_thing_model
+        WHERE product_key = #{productKey}
+          AND device_key = #{deviceKey}
+        LIMIT 1
+    </select>
+
+    <delete id="deleteByProductAndDevice">
+        DELETE FROM iot_device_thing_model
+        WHERE product_key = #{productKey}
+          AND device_key = #{deviceKey}
+    </delete>
+
+</mapper>

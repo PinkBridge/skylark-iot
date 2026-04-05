@@ -1,14 +1,19 @@
 package cn.skylark.iot.mgmt.service;
 
+import cn.skylark.iot.access.mapper.AclPolicyMapper;
+import cn.skylark.iot.access.model.AclPolicyRecord;
 import cn.skylark.iot.common.tenant.TenantContext;
 import cn.skylark.iot.mgmt.mapper.DeviceConnectRecordMapper;
 import cn.skylark.iot.mgmt.mapper.DeviceRecordMapper;
+import cn.skylark.iot.mgmt.mapper.DeviceThingModelMapper;
 import cn.skylark.iot.mgmt.mapper.DeviceMapper;
 import cn.skylark.iot.mgmt.mapper.ProductMapper;
+import cn.skylark.iot.mgmt.mapper.ThingModelMapper;
 import cn.skylark.iot.mgmt.model.dto.CreateDeviceConnectRecordRequest;
 import cn.skylark.iot.mgmt.model.dto.CreateDeviceRequest;
 import cn.skylark.iot.mgmt.model.dto.DeviceConnectRecordPageResponse;
 import cn.skylark.iot.mgmt.model.dto.DeviceConnectRecordResponse;
+import cn.skylark.iot.mgmt.model.dto.DeviceCurrentPropertyResponse;
 import cn.skylark.iot.mgmt.model.dto.DeviceEventRecordPageResponse;
 import cn.skylark.iot.mgmt.model.dto.DeviceEventRecordResponse;
 import cn.skylark.iot.mgmt.model.dto.DevicePageQuery;
@@ -19,13 +24,21 @@ import cn.skylark.iot.mgmt.model.dto.DeviceRecordPageQuery;
 import cn.skylark.iot.mgmt.model.dto.DeviceResponse;
 import cn.skylark.iot.mgmt.model.dto.DeviceServiceRecordPageResponse;
 import cn.skylark.iot.mgmt.model.dto.DeviceServiceRecordResponse;
+import cn.skylark.iot.mgmt.model.dto.ProductDataChannelResponse;
+import cn.skylark.iot.mgmt.model.dto.UpdateProductDataChannelRequest;
 import cn.skylark.iot.mgmt.model.dto.UpdateDeviceRequest;
 import cn.skylark.iot.mgmt.model.entity.DeviceConnectRecordEntity;
 import cn.skylark.iot.mgmt.model.entity.DeviceEventRecordEntity;
 import cn.skylark.iot.mgmt.model.entity.DeviceEntity;
 import cn.skylark.iot.mgmt.model.entity.DevicePropertyRecordEntity;
 import cn.skylark.iot.mgmt.model.entity.DeviceServiceRecordEntity;
+import cn.skylark.iot.mgmt.model.entity.DeviceThingModelEntity;
 import cn.skylark.iot.mgmt.model.entity.ProductEntity;
+import cn.skylark.iot.mgmt.model.entity.ThingModelEntity;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -33,29 +46,49 @@ import org.springframework.util.StringUtils;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 @Service
 public class DeviceServiceImpl implements DeviceService {
+    private static final Logger log = LoggerFactory.getLogger(DeviceServiceImpl.class);
     private static final String STATUS_ENABLED = "enabled";
     private static final String STATUS_DISABLED = "disabled";
     private static final String CONNECT_STATUS_DISCONNECTED = "disconnected";
     private static final String CONNECT_STATUS_CONNECTED = "connected";
+    private static final String PROTOCOL_MQTT_ALINK_JSON = "MQTT_ALINK_JSON";
+    private static final String DEVICE_KEY_PLACEHOLDER = "${deviceKey}";
+    private static final Pattern DEVICE_KEY_PLACEHOLDER_PATTERN =
+            Pattern.compile("\\$\\{\\s*device[_-]?key\\s*\\}|\\{\\s*device[_-]?key\\s*\\}", Pattern.CASE_INSENSITIVE);
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private final DeviceMapper deviceMapper;
     private final DeviceRecordMapper deviceRecordMapper;
     private final DeviceConnectRecordMapper deviceConnectRecordMapper;
     private final ProductMapper productMapper;
+    private final ThingModelMapper thingModelMapper;
+    private final DeviceThingModelMapper deviceThingModelMapper;
+    private final AclPolicyMapper aclPolicyMapper;
+    private final ObjectMapper objectMapper;
 
     public DeviceServiceImpl(DeviceMapper deviceMapper,
                              DeviceRecordMapper deviceRecordMapper,
                              DeviceConnectRecordMapper deviceConnectRecordMapper,
-                             ProductMapper productMapper) {
+                             ProductMapper productMapper,
+                             ThingModelMapper thingModelMapper,
+                             DeviceThingModelMapper deviceThingModelMapper,
+                             AclPolicyMapper aclPolicyMapper,
+                             ObjectMapper objectMapper) {
         this.deviceMapper = deviceMapper;
         this.deviceRecordMapper = deviceRecordMapper;
         this.deviceConnectRecordMapper = deviceConnectRecordMapper;
         this.productMapper = productMapper;
+        this.thingModelMapper = thingModelMapper;
+        this.deviceThingModelMapper = deviceThingModelMapper;
+        this.aclPolicyMapper = aclPolicyMapper;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -79,6 +112,8 @@ public class DeviceServiceImpl implements DeviceService {
             entity.setProtocolVersion("1.0");
             try {
                 deviceMapper.insert(entity);
+                initDeviceThingModelSnapshot(product, entity);
+                initDefaultAclIfNeeded(product, entity);
                 return get(productKey, entity.getDeviceKey());
             } catch (DuplicateKeyException e) {
                 // If it's a deviceKey collision, retry; otherwise treat as conflict (e.g. duplicate deviceName).
@@ -177,6 +212,83 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
+    public List<ProductDataChannelResponse> listDataChannels(String productKey, String deviceKey) {
+        assertDeviceExists(productKey, deviceKey);
+        List<AclPolicyRecord> list = aclPolicyMapper.listDeviceChannels(productKey, deviceKey);
+        List<ProductDataChannelResponse> result = new ArrayList<ProductDataChannelResponse>();
+        if (list == null) {
+            return result;
+        }
+        for (AclPolicyRecord item : list) {
+            if (item == null) {
+                continue;
+            }
+            ProductDataChannelResponse row = new ProductDataChannelResponse();
+            row.setId(item.getId());
+            row.setAction(item.getAction());
+            row.setTopicPattern(item.getTopicPattern());
+            row.setEffect(item.getEffect());
+            row.setPriority(item.getPriority());
+            row.setEnabled(Boolean.TRUE.equals(item.getEnabled()));
+            result.add(row);
+        }
+        return result;
+    }
+
+    @Override
+    public void updateDataChannel(String productKey, String deviceKey, Long id, UpdateProductDataChannelRequest request) {
+        assertDeviceExists(productKey, deviceKey);
+        if (id == null || id.longValue() <= 0) {
+            throw new MgmtException(HttpStatus.BAD_REQUEST, "id invalid");
+        }
+        String effect = request.getEffect() == null ? "" : request.getEffect().trim().toLowerCase(Locale.ROOT);
+        if (!"allow".equals(effect) && !"deny".equals(effect)) {
+            throw new MgmtException(HttpStatus.BAD_REQUEST, "effect invalid");
+        }
+        if (request.getEnabled() == null) {
+            throw new MgmtException(HttpStatus.BAD_REQUEST, "enabled required");
+        }
+        int updated = aclPolicyMapper.updateDeviceEffectAndEnabledById(id, productKey, deviceKey, effect, request.getEnabled());
+        if (updated == 0) {
+            throw new MgmtException(HttpStatus.NOT_FOUND, "data channel not found");
+        }
+    }
+
+    @Override
+    public List<DeviceCurrentPropertyResponse> listCurrentProperties(String productKey, String deviceKey) {
+        assertDeviceExists(productKey, deviceKey);
+        String modelJson = resolveDeviceThingModelJson(productKey, deviceKey);
+        List<String> propertyIdentifiers = parsePropertyIdentifiers(modelJson);
+        List<DeviceCurrentPropertyResponse> result = new ArrayList<DeviceCurrentPropertyResponse>();
+        for (String identifier : propertyIdentifiers) {
+            DeviceCurrentPropertyResponse row = new DeviceCurrentPropertyResponse();
+            row.setPropertyIdentifier(identifier);
+            DevicePropertyRecordEntity latest = deviceRecordMapper.findLatestPropertyRecord(productKey, deviceKey, identifier);
+            if (latest != null) {
+                row.setPropertyValue(latest.getPropertyValue());
+                row.setDeviceTimestamp(latest.getDeviceTimestamp());
+                row.setCreatedAt(latest.getCreatedAt());
+            }
+            result.add(row);
+        }
+        return result;
+    }
+
+    @Override
+    public DevicePropertyRecordResponse getLatestPropertyValue(String productKey, String deviceKey, String propertyIdentifier) {
+        assertDeviceExists(productKey, deviceKey);
+        String identifier = safe(propertyIdentifier);
+        if (!StringUtils.hasText(identifier)) {
+            throw new MgmtException(HttpStatus.BAD_REQUEST, "propertyIdentifier required");
+        }
+        DevicePropertyRecordEntity entity = deviceRecordMapper.findLatestPropertyRecord(productKey, deviceKey, identifier);
+        if (entity == null) {
+            throw new MgmtException(HttpStatus.NOT_FOUND, "property record not found");
+        }
+        return toPropertyRecordResponse(entity);
+    }
+
+    @Override
     public DevicePropertyRecordPageResponse listPropertyRecords(String productKey, String deviceKey, DeviceRecordPageQuery query) {
         assertDeviceExists(productKey, deviceKey);
         int pageNum = normalizePageNum(query.getPageNum());
@@ -185,22 +297,26 @@ public class DeviceServiceImpl implements DeviceService {
         List<DevicePropertyRecordEntity> list = deviceRecordMapper.listPropertyRecords(productKey, deviceKey, offset, pageSize);
         List<DevicePropertyRecordResponse> result = new ArrayList<DevicePropertyRecordResponse>();
         for (DevicePropertyRecordEntity item : list) {
-            DevicePropertyRecordResponse response = new DevicePropertyRecordResponse();
-            response.setPropertyIdentifier(item.getPropertyIdentifier());
-            response.setPropertyValue(item.getPropertyValue());
-            response.setTraceId(item.getTraceId());
-            response.setMessageId(item.getMessageId());
-            response.setTopic(item.getTopic());
-            response.setDeviceTimestamp(item.getDeviceTimestamp());
-            response.setPayload(item.getPayload());
-            response.setCreatedAt(item.getCreatedAt());
-            result.add(response);
+            result.add(toPropertyRecordResponse(item));
         }
         DevicePropertyRecordPageResponse response = new DevicePropertyRecordPageResponse();
         response.setRecords(result);
         response.setTotal(deviceRecordMapper.countPropertyRecords(productKey, deviceKey));
         response.setPageNum(pageNum);
         response.setPageSize(pageSize);
+        return response;
+    }
+
+    private DevicePropertyRecordResponse toPropertyRecordResponse(DevicePropertyRecordEntity item) {
+        DevicePropertyRecordResponse response = new DevicePropertyRecordResponse();
+        response.setPropertyIdentifier(item.getPropertyIdentifier());
+        response.setPropertyValue(item.getPropertyValue());
+        response.setTraceId(item.getTraceId());
+        response.setMessageId(item.getMessageId());
+        response.setTopic(item.getTopic());
+        response.setDeviceTimestamp(item.getDeviceTimestamp());
+        response.setPayload(item.getPayload());
+        response.setCreatedAt(item.getCreatedAt());
         return response;
     }
 
@@ -265,6 +381,7 @@ public class DeviceServiceImpl implements DeviceService {
         if (deviceMapper.deleteByPkAndDeviceKey(productKey, deviceKey) == 0) {
             throw new MgmtException(HttpStatus.NOT_FOUND, "device not found");
         }
+        deviceThingModelMapper.deleteByProductAndDevice(productKey, deviceKey);
     }
 
     @Override
@@ -299,7 +416,10 @@ public class DeviceServiceImpl implements DeviceService {
         if (!CONNECT_STATUS_CONNECTED.equals(action) && !CONNECT_STATUS_DISCONNECTED.equals(action)) {
             throw new MgmtException(HttpStatus.BAD_REQUEST, "action invalid");
         }
-        deviceMapper.updateConnectStatusWithLastTime(productKey, deviceKey, action);
+        int updated = deviceMapper.updateConnectStatusWithLastTime(productKey, deviceKey, action);
+        if (updated == 0) {
+            throw new MgmtException(HttpStatus.NOT_FOUND, "device not found");
+        }
         DeviceConnectRecordEntity entity = new DeviceConnectRecordEntity();
         entity.setTenantId(TenantContext.getTenantId());
         entity.setProductKey(productKey);
@@ -338,6 +458,108 @@ public class DeviceServiceImpl implements DeviceService {
         return product;
     }
 
+    private void initDeviceThingModelSnapshot(ProductEntity product, DeviceEntity device) {
+        if (product == null || device == null) {
+            return;
+        }
+        String productKey = safe(device.getProductKey());
+        String deviceKey = safe(device.getDeviceKey());
+        if (!StringUtils.hasText(productKey) || !StringUtils.hasText(deviceKey)) {
+            return;
+        }
+        ThingModelEntity model = thingModelMapper.findLatestByProductKey(productKey);
+        if (model == null || !StringUtils.hasText(model.getModelJson())) {
+            return;
+        }
+        Long tenantId = device.getTenantId() == null ? TenantContext.getTenantId() : device.getTenantId();
+        DeviceThingModelEntity snapshot = new DeviceThingModelEntity();
+        snapshot.setTenantId(tenantId);
+        snapshot.setProductKey(productKey);
+        snapshot.setDeviceKey(deviceKey);
+        snapshot.setVersion(safe(model.getVersion()));
+        snapshot.setModelJson(model.getModelJson());
+        try {
+            deviceThingModelMapper.insert(snapshot);
+        } catch (RuntimeException e) {
+            // Keep create flow resilient if snapshot already exists (retry/import edge cases).
+            deviceThingModelMapper.updateModel(productKey, deviceKey, snapshot.getVersion(), snapshot.getModelJson());
+        }
+    }
+
+    private void initDefaultAclIfNeeded(ProductEntity product, DeviceEntity device) {
+        if (product == null || device == null) {
+            return;
+        }
+        if (!PROTOCOL_MQTT_ALINK_JSON.equalsIgnoreCase(safe(product.getProtocolType()))) {
+            return;
+        }
+        String productKey = safe(device.getProductKey());
+        String deviceKey = safe(device.getDeviceKey());
+        if (!StringUtils.hasText(productKey) || !StringUtils.hasText(deviceKey)) {
+            return;
+        }
+        Long tenantId = device.getTenantId() == null ? TenantContext.getTenantId() : device.getTenantId();
+
+        List<AclPolicyRecord> templates = aclPolicyMapper.findProductTemplates(productKey);
+        if (templates != null && !templates.isEmpty()) {
+            for (AclPolicyRecord item : templates) {
+                if (item == null || !Boolean.TRUE.equals(item.getEnabled())) {
+                    continue;
+                }
+                String templateTopic = safe(item.getTopicPattern());
+                if (!StringUtils.hasText(templateTopic)) {
+                    continue;
+                }
+                String topicPattern = resolveDeviceTopicPattern(templateTopic, deviceKey);
+                insertDefaultAclPolicy(tenantId, productKey, deviceKey,
+                        safe(item.getAction()), topicPattern, safe(item.getEffect()),
+                        item.getPriority() == null ? 200 : item.getPriority().intValue());
+            }
+            // Defensive pass: ensure imported/legacy template placeholders are fully materialized.
+            aclPolicyMapper.replaceDevicePlaceholders(productKey, deviceKey);
+            return;
+        }
+
+        // Backward-compatible fallback for older products without template policies.
+        insertDefaultAclPolicy(tenantId, productKey, deviceKey, "publish",
+                "/sys/" + productKey + "/" + deviceKey + "/thing/event/property/post", "allow", 300);
+        insertDefaultAclPolicy(tenantId, productKey, deviceKey, "publish",
+                "/sys/" + productKey + "/" + deviceKey + "/thing/event/+/post", "allow", 300);
+        insertDefaultAclPolicy(tenantId, productKey, deviceKey, "publish",
+                "/sys/" + productKey + "/" + deviceKey + "/thing/service/+/reply", "allow", 300);
+        insertDefaultAclPolicy(tenantId, productKey, deviceKey, "publish",
+                "/sys/" + productKey + "/" + deviceKey + "/thing/service/#", "deny", 200);
+        insertDefaultAclPolicy(tenantId, productKey, deviceKey, "subscribe",
+                "/sys/" + productKey + "/" + deviceKey + "/thing/service/#", "allow", 300);
+        insertDefaultAclPolicy(tenantId, productKey, deviceKey, "subscribe",
+                "/sys/" + productKey + "/" + deviceKey + "/thing/event/property/post_reply", "allow", 300);
+        insertDefaultAclPolicy(tenantId, productKey, deviceKey, "subscribe",
+                "/sys/" + productKey + "/" + deviceKey + "/thing/event/+/post_reply", "allow", 300);
+        insertDefaultAclPolicy(tenantId, productKey, deviceKey, "subscribe",
+                "/sys/" + productKey + "/" + deviceKey + "/thing/service/+/reply_ack", "allow", 300);
+        aclPolicyMapper.replaceDevicePlaceholders(productKey, deviceKey);
+    }
+
+    private void insertDefaultAclPolicy(Long tenantId, String productKey, String deviceKey,
+                                        String action, String topicPattern, String effect, int priority) {
+        try {
+            AclPolicyRecord policy = new AclPolicyRecord();
+            policy.setTenantId(tenantId);
+            policy.setProductKey(productKey);
+            policy.setSubjectType("device");
+            policy.setSubjectValue(deviceKey);
+            policy.setAction(action);
+            policy.setTopicPattern(topicPattern);
+            policy.setEffect(effect);
+            policy.setPriority(priority);
+            policy.setEnabled(Boolean.TRUE);
+            aclPolicyMapper.insert(policy);
+        } catch (RuntimeException e) {
+            log.warn("init default acl failed for {}/{} action={} topic={} effect={} priority={}: {}",
+                    productKey, deviceKey, action, topicPattern, effect, priority, e.getMessage());
+        }
+    }
+
     private DeviceResponse toResponse(DeviceEntity entity) {
         DeviceResponse resp = new DeviceResponse();
         resp.setProductKey(entity.getProductKey());
@@ -371,6 +593,60 @@ public class DeviceServiceImpl implements DeviceService {
         }
         String v = s.trim();
         return v.isEmpty() ? null : v;
+    }
+
+    private static String safe(String s) {
+        return s == null ? "" : s.trim();
+    }
+
+    private String resolveDeviceThingModelJson(String productKey, String deviceKey) {
+        DeviceThingModelEntity deviceModel = deviceThingModelMapper.findByProductAndDevice(productKey, deviceKey);
+        if (deviceModel != null && StringUtils.hasText(deviceModel.getModelJson())) {
+            return deviceModel.getModelJson();
+        }
+        ThingModelEntity productModel = thingModelMapper.findLatestByProductKey(productKey);
+        if (productModel != null && StringUtils.hasText(productModel.getModelJson())) {
+            return productModel.getModelJson();
+        }
+        return "{}";
+    }
+
+    private List<String> parsePropertyIdentifiers(String modelJson) {
+        Set<String> unique = new LinkedHashSet<String>();
+        try {
+            JsonNode root = objectMapper.readTree(modelJson == null ? "{}" : modelJson);
+            JsonNode props = root.path("properties");
+            if (!props.isArray()) {
+                return new ArrayList<String>();
+            }
+            for (JsonNode item : props) {
+                if (item == null || !item.isObject()) {
+                    continue;
+                }
+                String identifier = safe(item.path("identifier").asText(""));
+                if (StringUtils.hasText(identifier)) {
+                    unique.add(identifier);
+                }
+            }
+        } catch (Exception e) {
+            throw new MgmtException(HttpStatus.BAD_REQUEST, "device thing model json is invalid");
+        }
+        return new ArrayList<String>(unique);
+    }
+
+    private static String resolveDeviceTopicPattern(String templateTopic, String deviceKey) {
+        String key = safe(deviceKey);
+        if (!StringUtils.hasText(templateTopic) || !StringUtils.hasText(key)) {
+            return safe(templateTopic);
+        }
+        // Backward compatible replacement:
+        // ${deviceKey}, ${device_key}, {deviceKey}, {device_key} (case-insensitive, spaces tolerant).
+        String replaced = DEVICE_KEY_PLACEHOLDER_PATTERN.matcher(templateTopic).replaceAll(key);
+        // Keep original exact token replacement as a fallback for uncommon escaping cases.
+        if (replaced.contains(DEVICE_KEY_PLACEHOLDER)) {
+            replaced = replaced.replace(DEVICE_KEY_PLACEHOLDER, key);
+        }
+        return replaced;
     }
 
     private static String randomHex(int bytes) {
