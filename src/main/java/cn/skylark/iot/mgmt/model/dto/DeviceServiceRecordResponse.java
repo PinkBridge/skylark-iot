@@ -13,5 +13,6 @@ public class DeviceServiceRecordResponse {
     private String topic;
     private Long deviceTimestamp;
     private String payload;
+    private String outputPayload;
     private LocalDateTime createdAt;
 }

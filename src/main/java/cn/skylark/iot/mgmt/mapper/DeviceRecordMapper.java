@@ -16,6 +16,14 @@ public interface DeviceRecordMapper {
 
     int insertServiceRecord(DeviceServiceRecordEntity entity);
 
+    int updateServiceRecordOutputByMessageId(@Param("productKey") String productKey,
+                                             @Param("deviceName") String deviceName,
+                                             @Param("serviceName") String serviceName,
+                                             @Param("messageId") String messageId,
+                                             @Param("outputTopic") String outputTopic,
+                                             @Param("outputDeviceTimestamp") Long outputDeviceTimestamp,
+                                             @Param("outputPayload") String outputPayload);
+
     List<DevicePropertyRecordEntity> listPropertyRecords(@Param("productKey") String productKey,
                                                          @Param("deviceKey") String deviceKey,
                                                          @Param("offset") int offset,

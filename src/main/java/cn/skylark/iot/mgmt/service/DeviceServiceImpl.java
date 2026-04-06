@@ -364,6 +364,7 @@ public class DeviceServiceImpl implements DeviceService {
             response.setTopic(item.getTopic());
             response.setDeviceTimestamp(item.getDeviceTimestamp());
             response.setPayload(item.getPayload());
+            response.setOutputPayload(item.getOutputPayload());
             response.setCreatedAt(item.getCreatedAt());
             result.add(response);
         }

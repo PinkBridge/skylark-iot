@@ -17,5 +17,8 @@ public class DeviceServiceRecordEntity {
     private String topic;
     private Long deviceTimestamp;
     private String payload;
+    private String outputTopic;
+    private Long outputDeviceTimestamp;
+    private String outputPayload;
     private LocalDateTime createdAt;
 }

@@ -12,9 +12,11 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import javax.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -38,6 +40,17 @@ public class EmqxManagementHttpClient implements EmqxManagementClient {
         this.restTemplate = new RestTemplate();
     }
 
+    @PostConstruct
+    public void checkCredentialHealthAtStartup() {
+        String baseUrl = properties.getEmqx() == null ? "" : safe(properties.getEmqx().getBaseUrl());
+        if (!StringUtils.hasText(baseUrl)) {
+            log.warn("EMQX credential health check skipped: baseUrl is empty.");
+            return;
+        }
+        checkBasicAuthHealth(baseUrl);
+        checkTokenLoginHealth(baseUrl);
+    }
+
     @Override
     public Optional<String> publish(DownstreamPublishRequest req) {
         String baseUrl = properties.getEmqx() == null ? "" : safe(properties.getEmqx().getBaseUrl());
@@ -46,9 +59,14 @@ public class EmqxManagementHttpClient implements EmqxManagementClient {
         }
         String url = baseUrl.endsWith("/") ? (baseUrl + "api/v5/publish") : (baseUrl + "/api/v5/publish");
 
+        Map<String, Object> body = new HashMap<String, Object>();
+        body.put("topic", req.getTopic());
+        body.put("payload", req.getPayload() == null ? "" : req.getPayload());
+        body.put("qos", req.getQos() == null ? 1 : req.getQos());
+        body.put("retain", req.getRetain() != null && req.getRetain());
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-
         String apiKey = properties.getEmqx() == null ? "" : safe(properties.getEmqx().getApiKey());
         String apiSecret = properties.getEmqx() == null ? "" : safe(properties.getEmqx().getApiSecret());
         if (StringUtils.hasText(apiKey) && StringUtils.hasText(apiSecret)) {
@@ -57,29 +75,107 @@ public class EmqxManagementHttpClient implements EmqxManagementClient {
             log.warn("EMQX apiKey/apiSecret empty; publish may fail if EMQX requires auth");
         }
 
-        Map<String, Object> body = new HashMap<String, Object>();
-        body.put("topic", req.getTopic());
-        body.put("payload", req.getPayload() == null ? "" : req.getPayload());
-        body.put("qos", req.getQos() == null ? 1 : req.getQos());
-        body.put("retain", req.getRetain() != null && req.getRetain());
-
         try {
             log.info("iot.downstream.publish traceId={}, topic={}, qos={}, retain={}",
                     req.getTraceId(),
                     req.getTopic(),
                     body.get("qos"),
                     body.get("retain"));
-            ResponseEntity<String> resp = restTemplate.postForEntity(url, new HttpEntity<Map<String, Object>>(body, headers), String.class);
-            if (!resp.getStatusCode().is2xxSuccessful()) {
-                return Optional.of("emqx publish http not 2xx: " + resp.getStatusCode());
+            try {
+                return doPublish(url, body, headers);
+            } catch (HttpStatusCodeException e) {
+                if (e.getRawStatusCode() != 401) {
+                    return Optional.of("emqx publish request failed: " + e.getStatusCode() + ": " + abbreviate(e.getResponseBodyAsString(), 300));
+                }
+                String token = loginDashboardAndGetToken(baseUrl);
+                if (!StringUtils.hasText(token)) {
+                    return Optional.of("emqx publish request failed: " + e.getStatusCode() + ": " + abbreviate(e.getResponseBodyAsString(), 300));
+                }
+                HttpHeaders bearerHeaders = new HttpHeaders();
+                bearerHeaders.setContentType(MediaType.APPLICATION_JSON);
+                bearerHeaders.setBearerAuth(token);
+                log.info("iot.downstream.publish retry with dashboard token, traceId={}", req.getTraceId());
+                return doPublish(url, body, bearerHeaders);
             }
-            String raw = resp.getBody() == null ? "" : resp.getBody();
-            return parseErrorIfAny(raw);
         } catch (RestClientException e) {
             return Optional.of("emqx publish request failed: " + e.getMessage());
         } catch (Exception e) {
             return Optional.of("emqx publish unexpected error: " + e.getMessage());
         }
+    }
+
+    private Optional<String> doPublish(String url, Map<String, Object> body, HttpHeaders headers) throws Exception {
+        ResponseEntity<String> resp = restTemplate.postForEntity(url, new HttpEntity<Map<String, Object>>(body, headers), String.class);
+        if (!resp.getStatusCode().is2xxSuccessful()) {
+            return Optional.of("emqx publish http not 2xx: " + resp.getStatusCode());
+        }
+        String raw = resp.getBody() == null ? "" : resp.getBody();
+        return parseErrorIfAny(raw);
+    }
+
+    private String loginDashboardAndGetToken(String baseUrl) {
+        String username = properties.getEmqx() == null ? "" : safe(properties.getEmqx().getDashboardUsername());
+        String password = properties.getEmqx() == null ? "" : safe(properties.getEmqx().getDashboardPassword());
+        if (!StringUtils.hasText(username) || !StringUtils.hasText(password)) {
+            return "";
+        }
+        String loginUrl = baseUrl.endsWith("/") ? (baseUrl + "api/v5/login") : (baseUrl + "/api/v5/login");
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            Map<String, String> payload = new HashMap<String, String>();
+            payload.put("username", username);
+            payload.put("password", password);
+            ResponseEntity<String> resp = restTemplate.postForEntity(loginUrl, new HttpEntity<Map<String, String>>(payload, headers), String.class);
+            if (!resp.getStatusCode().is2xxSuccessful() || !StringUtils.hasText(resp.getBody())) {
+                return "";
+            }
+            JsonNode root = objectMapper.readTree(resp.getBody());
+            return safe(root.path("token").asText(""));
+        } catch (Exception e) {
+            log.warn("EMQX dashboard login fallback failed: {}", e.getMessage());
+            return "";
+        }
+    }
+
+    private void checkBasicAuthHealth(String baseUrl) {
+        String apiKey = properties.getEmqx() == null ? "" : safe(properties.getEmqx().getApiKey());
+        String apiSecret = properties.getEmqx() == null ? "" : safe(properties.getEmqx().getApiSecret());
+        if (!StringUtils.hasText(apiKey) || !StringUtils.hasText(apiSecret)) {
+            log.warn("EMQX basic credential health check: EMQX_API_KEY/EMQX_API_SECRET is empty.");
+            return;
+        }
+        String checkUrl = baseUrl.endsWith("/") ? (baseUrl + "api/v5/bridges") : (baseUrl + "/api/v5/bridges");
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBasicAuth(apiKey, apiSecret);
+            ResponseEntity<String> resp = restTemplate.exchange(checkUrl, org.springframework.http.HttpMethod.GET, new HttpEntity<String>(headers), String.class);
+            if (resp.getStatusCode().is2xxSuccessful()) {
+                log.info("EMQX basic credential health check passed.");
+                return;
+            }
+            log.warn("EMQX basic credential health check failed: status={}", resp.getStatusCodeValue());
+        } catch (HttpStatusCodeException e) {
+            log.warn("EMQX basic credential health check failed: status={}, body={}",
+                    e.getRawStatusCode(), abbreviate(e.getResponseBodyAsString(), 200));
+        } catch (Exception e) {
+            log.warn("EMQX basic credential health check error: {}", e.getMessage());
+        }
+    }
+
+    private void checkTokenLoginHealth(String baseUrl) {
+        String username = properties.getEmqx() == null ? "" : safe(properties.getEmqx().getDashboardUsername());
+        String password = properties.getEmqx() == null ? "" : safe(properties.getEmqx().getDashboardPassword());
+        if (!StringUtils.hasText(username) || !StringUtils.hasText(password)) {
+            log.warn("EMQX token credential health check: dashboard username/password is empty.");
+            return;
+        }
+        String token = loginDashboardAndGetToken(baseUrl);
+        if (StringUtils.hasText(token)) {
+            log.info("EMQX token credential health check passed for user '{}'.", username);
+            return;
+        }
+        log.warn("EMQX token credential health check failed for user '{}'.", username);
     }
 
     private Optional<String> parseErrorIfAny(String raw) throws Exception {

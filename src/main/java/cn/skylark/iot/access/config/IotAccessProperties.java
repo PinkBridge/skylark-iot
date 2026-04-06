@@ -70,6 +70,16 @@ public class IotAccessProperties {
          * EMQX API Secret（作为 BasicAuth password）。
          */
         private String apiSecret = "";
+
+        /**
+         * Optional dashboard username for fallback token login (/api/v5/login).
+         */
+        private String dashboardUsername = "";
+
+        /**
+         * Optional dashboard password for fallback token login (/api/v5/login).
+         */
+        private String dashboardPassword = "";
     }
 
     @Data

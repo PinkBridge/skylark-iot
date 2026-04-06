@@ -45,6 +45,9 @@
         <result column="topic" property="topic"/>
         <result column="device_timestamp" property="deviceTimestamp"/>
         <result column="payload" property="payload"/>
+        <result column="output_topic" property="outputTopic"/>
+        <result column="output_device_timestamp" property="outputDeviceTimestamp"/>
+        <result column="output_payload" property="outputPayload"/>
         <result column="created_at" property="createdAt"/>
     </resultMap>
 
@@ -62,6 +65,18 @@
         INSERT INTO iot_device_service_record(tenant_id, product_key, device_name, service_name, direction, trace_id, message_id, topic, device_timestamp, payload, created_at)
         VALUES (#{tenantId}, #{productKey}, #{deviceName}, #{serviceName}, #{direction}, #{traceId}, #{messageId}, #{topic}, #{deviceTimestamp}, #{payload}, CURRENT_TIMESTAMP)
     </insert>
+
+    <update id="updateServiceRecordOutputByMessageId">
+        UPDATE iot_device_service_record
+        SET output_topic = #{outputTopic},
+            output_device_timestamp = #{outputDeviceTimestamp},
+            output_payload = #{outputPayload}
+        WHERE product_key = #{productKey}
+          AND device_name = #{deviceName}
+          AND service_name = #{serviceName}
+          AND direction = 'request'
+          AND message_id = #{messageId}
+    </update>
 
     <select id="listPropertyRecords" resultMap="DevicePropertyRecordMap">
         SELECT id, tenant_id, product_key, device_name, property_identifier, property_value, trace_id, message_id, topic, device_timestamp, payload, created_at
@@ -106,7 +121,8 @@
     </select>
 
     <select id="listServiceRecords" resultMap="DeviceServiceRecordMap">
-        SELECT id, tenant_id, product_key, device_name, service_name, direction, trace_id, message_id, topic, device_timestamp, payload, created_at
+        SELECT id, tenant_id, product_key, device_name, service_name, direction, trace_id, message_id,
+               topic, device_timestamp, payload, output_topic, output_device_timestamp, output_payload, created_at
         FROM iot_device_service_record
         WHERE product_key = #{productKey}
           AND device_name = #{deviceKey}

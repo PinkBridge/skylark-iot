@@ -42,6 +42,9 @@ iot:
       # 建议在 EMQX Dashboard -> System -> API Key 创建一对 key/secret
       api-key: ${EMQX_API_KEY:}
       api-secret: ${EMQX_API_SECRET:}
+      # Fallback: if publish returns 401, login by dashboard credentials to get Bearer token.
+      dashboard-username: ${EMQX_SYSTEM_API_USERNAME:${EMQX_DASHBOARD_USERNAME:}}
+      dashboard-password: ${EMQX_SYSTEM_API_PASSWORD:${EMQX_DASHBOARD_PASSWORD:}}
     devices:
       - device-id: demo-001
         username: demo-001

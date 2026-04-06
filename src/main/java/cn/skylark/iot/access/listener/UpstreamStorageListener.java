@@ -110,6 +110,19 @@ public class UpstreamStorageListener {
 
     private void persistServiceReplyRecord(DeviceUpstreamEvent event) throws Exception {
         JsonNode root = objectMapper.readTree(safe(event.getPayload()));
+        String outputPayload = stringifyPayloadNode(root.path("data"), event.getPayload());
+        int updated = deviceRecordMapper.updateServiceRecordOutputByMessageId(
+                event.getProductKey(),
+                event.getDeviceId(),
+                StringUtils.hasText(event.getServiceName()) ? event.getServiceName() : "unknown",
+                event.getMessageId(),
+                event.getTopic(),
+                resolveDeviceTimestamp(root, event),
+                outputPayload
+        );
+        if (updated > 0) {
+            return;
+        }
         DeviceServiceRecordEntity record = new DeviceServiceRecordEntity();
         record.setTenantId(resolveTenantId(event.getProductKey()));
         record.setProductKey(event.getProductKey());
@@ -120,7 +133,7 @@ public class UpstreamStorageListener {
         record.setMessageId(event.getMessageId());
         record.setTopic(event.getTopic());
         record.setDeviceTimestamp(resolveDeviceTimestamp(root, event));
-        record.setPayload(stringifyPayloadNode(root.path("data"), event.getPayload()));
+        record.setPayload(outputPayload);
         deviceRecordMapper.insertServiceRecord(record);
     }
 
