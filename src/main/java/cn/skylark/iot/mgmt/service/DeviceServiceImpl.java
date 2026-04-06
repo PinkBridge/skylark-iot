@@ -4,6 +4,7 @@ import cn.skylark.iot.access.mapper.AclPolicyMapper;
 import cn.skylark.iot.access.model.AclPolicyRecord;
 import cn.skylark.iot.common.tenant.TenantContext;
 import cn.skylark.iot.mgmt.mapper.DeviceConnectRecordMapper;
+import cn.skylark.iot.mgmt.mapper.DeviceGroupRelMapper;
 import cn.skylark.iot.mgmt.mapper.DeviceRecordMapper;
 import cn.skylark.iot.mgmt.mapper.DeviceThingModelMapper;
 import cn.skylark.iot.mgmt.mapper.DeviceMapper;
@@ -67,6 +68,7 @@ public class DeviceServiceImpl implements DeviceService {
     private final DeviceMapper deviceMapper;
     private final DeviceRecordMapper deviceRecordMapper;
     private final DeviceConnectRecordMapper deviceConnectRecordMapper;
+    private final DeviceGroupRelMapper deviceGroupRelMapper;
     private final ProductMapper productMapper;
     private final ThingModelMapper thingModelMapper;
     private final DeviceThingModelMapper deviceThingModelMapper;
@@ -76,6 +78,7 @@ public class DeviceServiceImpl implements DeviceService {
     public DeviceServiceImpl(DeviceMapper deviceMapper,
                              DeviceRecordMapper deviceRecordMapper,
                              DeviceConnectRecordMapper deviceConnectRecordMapper,
+                             DeviceGroupRelMapper deviceGroupRelMapper,
                              ProductMapper productMapper,
                              ThingModelMapper thingModelMapper,
                              DeviceThingModelMapper deviceThingModelMapper,
@@ -84,6 +87,7 @@ public class DeviceServiceImpl implements DeviceService {
         this.deviceMapper = deviceMapper;
         this.deviceRecordMapper = deviceRecordMapper;
         this.deviceConnectRecordMapper = deviceConnectRecordMapper;
+        this.deviceGroupRelMapper = deviceGroupRelMapper;
         this.productMapper = productMapper;
         this.thingModelMapper = thingModelMapper;
         this.deviceThingModelMapper = deviceThingModelMapper;
@@ -382,6 +386,7 @@ public class DeviceServiceImpl implements DeviceService {
         if (deviceMapper.deleteByPkAndDeviceKey(productKey, deviceKey) == 0) {
             throw new MgmtException(HttpStatus.NOT_FOUND, "device not found");
         }
+        deviceGroupRelMapper.deleteByProductAndDevice(productKey, deviceKey);
         deviceThingModelMapper.deleteByProductAndDevice(productKey, deviceKey);
     }
 
@@ -517,7 +522,7 @@ public class DeviceServiceImpl implements DeviceService {
                         item.getPriority() == null ? 200 : item.getPriority().intValue());
             }
             // Defensive pass: ensure imported/legacy template placeholders are fully materialized.
-            aclPolicyMapper.replaceDevicePlaceholders(productKey, deviceKey);
+            tryReplaceDevicePlaceholders(productKey, deviceKey);
             return;
         }
 
@@ -538,7 +543,15 @@ public class DeviceServiceImpl implements DeviceService {
                 "/sys/" + productKey + "/" + deviceKey + "/thing/event/+/post_reply", "allow", 300);
         insertDefaultAclPolicy(tenantId, productKey, deviceKey, "subscribe",
                 "/sys/" + productKey + "/" + deviceKey + "/thing/service/+/reply_ack", "allow", 300);
-        aclPolicyMapper.replaceDevicePlaceholders(productKey, deviceKey);
+        tryReplaceDevicePlaceholders(productKey, deviceKey);
+    }
+
+    private void tryReplaceDevicePlaceholders(String productKey, String deviceKey) {
+        try {
+            aclPolicyMapper.replaceDevicePlaceholders(productKey, deviceKey);
+        } catch (RuntimeException e) {
+            log.warn("replace device placeholders failed for {}/{}: {}", productKey, deviceKey, e.getMessage());
+        }
     }
 
     private void insertDefaultAclPolicy(Long tenantId, String productKey, String deviceKey,

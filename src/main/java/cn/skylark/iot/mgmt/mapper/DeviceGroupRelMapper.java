@@ -18,6 +18,11 @@ public interface DeviceGroupRelMapper {
 
     int deleteByGroupKey(@Param("groupKey") String groupKey);
 
+    int deleteByProductKey(@Param("productKey") String productKey);
+
+    int deleteByProductAndDevice(@Param("productKey") String productKey,
+                                 @Param("deviceKey") String deviceKey);
+
     List<DeviceGroupRelEntity> listByGroupKey(@Param("groupKey") String groupKey);
 
     long countByGroupKey(@Param("groupKey") String groupKey);

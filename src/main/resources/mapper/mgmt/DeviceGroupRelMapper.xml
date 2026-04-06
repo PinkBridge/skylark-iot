@@ -30,6 +30,17 @@
         WHERE group_key = #{groupKey}
     </delete>
 
+    <delete id="deleteByProductKey">
+        DELETE FROM iot_device_group_rel
+        WHERE product_key = #{productKey}
+    </delete>
+
+    <delete id="deleteByProductAndDevice">
+        DELETE FROM iot_device_group_rel
+        WHERE product_key = #{productKey}
+          AND device_key = #{deviceKey}
+    </delete>
+
     <select id="listByGroupKey" resultMap="DeviceGroupRelMap">
         SELECT id, tenant_id, group_key, product_key, device_key, created_at
         FROM iot_device_group_rel

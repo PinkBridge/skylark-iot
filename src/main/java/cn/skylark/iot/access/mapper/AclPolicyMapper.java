@@ -31,6 +31,8 @@ public interface AclPolicyMapper {
     int replaceDevicePlaceholders(@Param("productKey") String productKey,
                                   @Param("deviceKey") String deviceKey);
 
+    int deleteByProductKey(@Param("productKey") String productKey);
+
     List<AclPolicyRecord> findCandidates(@Param("productKey") String productKey,
                                          @Param("action") String action,
                                          @Param("subjectValue") String subjectValue);

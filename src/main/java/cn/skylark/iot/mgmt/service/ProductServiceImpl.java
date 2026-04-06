@@ -5,6 +5,7 @@ import cn.skylark.iot.access.model.AclPolicyRecord;
 import cn.skylark.iot.common.tenant.TenantContext;
 import cn.skylark.iot.mgmt.mapper.ProductMapper;
 import cn.skylark.iot.mgmt.mapper.DeviceMapper;
+import cn.skylark.iot.mgmt.mapper.DeviceGroupRelMapper;
 import cn.skylark.iot.mgmt.mapper.ThingModelMapper;
 import cn.skylark.iot.mgmt.model.dto.CopyProductRequest;
 import cn.skylark.iot.mgmt.model.dto.CreateProductRequest;
@@ -44,15 +45,18 @@ public class ProductServiceImpl implements ProductService {
 
     private final ProductMapper productMapper;
     private final DeviceMapper deviceMapper;
+    private final DeviceGroupRelMapper deviceGroupRelMapper;
     private final ThingModelMapper thingModelMapper;
     private final AclPolicyMapper aclPolicyMapper;
 
     public ProductServiceImpl(ProductMapper productMapper,
                               DeviceMapper deviceMapper,
+                              DeviceGroupRelMapper deviceGroupRelMapper,
                               ThingModelMapper thingModelMapper,
                               AclPolicyMapper aclPolicyMapper) {
         this.productMapper = productMapper;
         this.deviceMapper = deviceMapper;
+        this.deviceGroupRelMapper = deviceGroupRelMapper;
         this.thingModelMapper = thingModelMapper;
         this.aclPolicyMapper = aclPolicyMapper;
     }
@@ -228,6 +232,8 @@ public class ProductServiceImpl implements ProductService {
         if (productMapper.findByProductKey(productKey) == null) {
             throw new MgmtException(HttpStatus.NOT_FOUND, "product not found");
         }
+        aclPolicyMapper.deleteByProductKey(productKey);
+        deviceGroupRelMapper.deleteByProductKey(productKey);
         deviceMapper.deleteByProductKey(productKey);
         thingModelMapper.deleteByProductKey(productKey);
         productMapper.deleteByProductKey(productKey);

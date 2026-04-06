@@ -108,6 +108,11 @@
           )
     </update>
 
+    <delete id="deleteByProductKey">
+        DELETE FROM iot_acl_policy
+        WHERE product_key = #{productKey}
+    </delete>
+
     <select id="findCandidates" resultMap="AclPolicyMap">
         SELECT id, tenant_id, product_key, subject_type, subject_value, action, topic_pattern, effect, priority, enabled
         FROM iot_acl_policy
